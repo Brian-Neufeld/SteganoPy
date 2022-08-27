@@ -5,7 +5,7 @@ from faulthandler import disable
 from pickletools import uint8
 from sre_parse import State
 import numpy as np
-#import PIL
+import PIL
 from tkinter import *
 from PIL import ImageTk,Image 
 import tkinter as tk
@@ -26,7 +26,7 @@ audiofilename = 1
 
 
 root = Tk()
-root.geometry('1280x768')
+root.geometry('1368x720')
 #root.attributes('-fullscreen', True)
 #root.resizable(0,0)
 root.title("SteganoPy")
@@ -93,16 +93,16 @@ def select_image_file():
     h = int(500 * hscale)
     resize_img = img.resize((w, h))
     img = ImageTk.PhotoImage(resize_img)
-    disp_img.config(image=img)
-    disp_img.image = img
+    disp_inputimg.config(image=img)
+    disp_inputimg.image = img
 
     #disp_img2.config(image=img)
     #disp_img2.image = img
 
     baseImgdims.config(text = f'witdth: {imgwidth} height: {imgheight}')
-    baseImgdims.place_configure(y=500*hscale+170)
+    baseImgdims.place_configure(y=500*hscale+120)
     
-    baseFrame.config(width=(500*wscale+8), height=(500*hscale+8))
+    inputimgFrame.config(width=(500*wscale+8), height=(500*hscale+8))
     
 
     if imgfilename == 1 or audiofilename == 1:
@@ -147,9 +147,14 @@ def select_audio_file():
     return audiofilename
 
 def previewEncode():
+    print(imgfilename)
     im = Image.open(imgfilename)
+    
+    a = np.array(im)
 
-    a = np.asarray(im)
+    
+
+    a[0][0][0] = 0
 
     audioclip = pydub.AudioSegment.from_mp3(audiofilename)
     audioarray = np.array(audioclip.get_array_of_samples())
@@ -216,11 +221,12 @@ def previewEncode():
     disp_img2.image = imgPreviewout
 
 def encoding():
-    
+    f = fd.asksaveasfile(mode='w', defaultextension=".png")
+
     im = Image.open(imgfilename)
     
         
-    a = np.asarray(im)
+    a = np.array(im)
 
     audioclip = pydub.AudioSegment.from_mp3(audiofilename)
     audioarray = np.array(audioclip.get_array_of_samples())
@@ -363,15 +369,15 @@ openimgfilename = tk.Label(
 )  
 
 
-baseFrame = tk.Frame(
-    tab1, 
+inputimgFrame = tk.Frame(
+    tab1,
     width=(500*wscale+8), 
     height=(500*hscale+8), 
     bd=2, 
     relief=SUNKEN
 )
 
-disp_img = tk.Label()
+disp_inputimg = tk.Label()
 
 baseFramedecode = tk.Frame(
     tab2, 
@@ -411,15 +417,13 @@ decode_button.place(x=0, y=55)
 
 
 
-baseFrame.place(x=173, y=155)
-disp_img.place(x=175, y=157)
+inputimgFrame.place(x=173, y=105)
+disp_inputimg.place(x=176, y=130)
+baseImgdims.place(x=173, y=620)
 
-baseFramedecode.place(x=173, y=5)
-disp_img3.place(x=175, y=157)
+outputFrame.place(x=773, y=105)
+disp_img2.place(x=776, y=130)
 
-outputFrame.place(x=773, y=155)
-disp_img2.place(x=775, y=157)
-baseImgdims.place(x=173, y=670)
 
 openimgfilename.place(x=173, y=15)
 openaudiofilename.place(x=173, y=65)
@@ -427,16 +431,6 @@ openaudiofilename.place(x=173, y=65)
 #LOD_slider.place(x=173, y=105)
 
 
-'''
-canvas = Canvas(root, width = 300, height = 300)  
-canvas.pack()  
-canvas.create_image(
-    10,
-    10,
-    anchor=NW,
-    image = img
-)
-'''
 
 #open_button.pack(expand=True)
 
