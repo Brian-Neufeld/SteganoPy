@@ -62,6 +62,9 @@ def select_image_file():
         filetypes=filetypes
     )
 
+    if imgfilename == "":
+        return
+
     imgfilename = "".join(imgfilename)
     
 
@@ -130,6 +133,9 @@ def select_audio_file():
         initialdir="/",
         filetypes=filetypes
     )
+
+    if audiofilename == "":
+        return
 
     audiofilename = "".join(audiofilename)
 
@@ -221,7 +227,13 @@ def previewEncode():
     disp_img2.image = imgPreviewout
 
 def encoding():
+    pb1["value"] = 0
+    #root.update_idletasks()
+    
+
     f = fd.asksaveasfile(mode='w', defaultextension=".png")
+
+    print(str(f.name))
 
     im = Image.open(imgfilename)
     
@@ -233,10 +245,10 @@ def encoding():
     audioarray = audioarray + (2**16)/2
     audioarray = np.rint((audioarray / 2**16) * 999)
 
-    print(len(a))
+    #print(len(a))
 
     for x in range(len(a)):
-        print(x)
+        #print(x)
         for y in range(len(a[x])):
             for z in range(len(a[x][y])):
                 
@@ -259,15 +271,19 @@ def encoding():
 
                 
                 #print(str(digit) + "  " + str(audioarray[x*len(a[x])+y]))
+        root.update_idletasks()
+        pb1["value"] += 1/len(a)*100
+        value_label['text'] = update_progress_label()
+        
                 
 
-    print(len(audioarray))
+    #print(len(audioarray))
 
    
 
     im2 = Image.fromarray(a)
     #im2 . show()
-    im2.save("E://Programming/Projects/audio image encoding/IMG.png", format="png")
+    im2.save(str(f.name), format="png")
 
 def decoding():
     global imgfilename
@@ -296,7 +312,8 @@ def decoding():
     song = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
     song.export("decoded audio.mp3", format="mp3", bitrate="48k")
 
-
+def update_progress_label():
+    return f"Current Progress: {round(pb1['value'],2)}%"
 
 
 open_img_button = tk.Button(
@@ -416,6 +433,11 @@ encode_button.place(x=0, y=155)
 decode_button.place(x=0, y=55)
 
 
+pb1 = ttk.Progressbar(root, orient=HORIZONTAL, length=150, mode='determinate')
+pb1.place(x=0,y=220)
+
+value_label = ttk.Label(root, text=update_progress_label())
+value_label.place(x=0,y=260)
 
 inputimgFrame.place(x=173, y=105)
 disp_inputimg.place(x=176, y=130)
@@ -423,10 +445,20 @@ baseImgdims.place(x=173, y=620)
 
 outputFrame.place(x=773, y=105)
 disp_img2.place(x=776, y=130)
+outputimglabel = tk.Label(
+    tab1,
+    text="1:1 pixel scale", 
+    bd=2, 
+    relief=SUNKEN
+)  
+outputimglabel.place(x=773, y=620)
 
 
 openimgfilename.place(x=173, y=15)
 openaudiofilename.place(x=173, y=65)
+
+baseFramedecode.place(x=173, y=105)
+
 
 #LOD_slider.place(x=173, y=105)
 
