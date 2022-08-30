@@ -1,4 +1,3 @@
-
 from cgitb import enable
 from cmath import nan
 from faulthandler import disable
@@ -153,13 +152,9 @@ def select_audio_file():
     return audiofilename
 
 def previewEncode():
-    print(imgfilename)
     im = Image.open(imgfilename)
-    
+          
     a = np.array(im)
-
-    
-
     a[0][0][0] = 0
 
     audioclip = pydub.AudioSegment.from_mp3(audiofilename)
@@ -167,10 +162,13 @@ def previewEncode():
     audioarray = audioarray + (2**16)/2
     audioarray = np.rint((audioarray / 2**16) * 999)
 
+    pb1["value"] = 0
+    value_label['text'] = "                                            "
+    root.update_idletasks()
     
     for x in range(len(a)):
         if x < 500:
-            print(x)
+            #print(x)
             for y in range(len(a[x])):
                 if y < 500:
                     for z in range(len(a[x][y])):
@@ -191,6 +189,16 @@ def previewEncode():
                                 colourValue = 255
 
                             a[x][y][z] = colourValue
+
+            if len(a) < 500:
+                pb1["value"] += 1/len(a) * 100
+                value_label['text'] = update_progress_label()
+                root.update_idletasks()
+            else:
+                pb1["value"] += 1/500 * 100
+                value_label['text'] = update_progress_label()
+                root.update_idletasks()
+
 
     
 
@@ -226,8 +234,14 @@ def previewEncode():
     disp_img2.config(image=imgPreviewout)
     disp_img2.image = imgPreviewout
 
+    if imgheight > 500:
+        imgheight = 500
+        
+    previewimglabel.place_configure(y=imgheight+120)
+
+
 def encoding():
-    pb1["value"] = 0
+    
     #root.update_idletasks()
     
 
@@ -246,6 +260,11 @@ def encoding():
     audioarray = np.rint((audioarray / 2**16) * 999)
 
     #print(len(a))
+
+    pb1["value"] = 0
+    value_label['text'] = "                                            "
+    root.update_idletasks()
+    
 
     for x in range(len(a)):
         #print(x)
@@ -271,10 +290,11 @@ def encoding():
 
                 
                 #print(str(digit) + "  " + str(audioarray[x*len(a[x])+y]))
-        root.update_idletasks()
         pb1["value"] += 1/len(a)*100
         value_label['text'] = update_progress_label()
+        root.update_idletasks()
         
+    
                 
 
     #print(len(audioarray))
@@ -434,7 +454,7 @@ decode_button.place(x=0, y=55)
 
 
 pb1 = ttk.Progressbar(root, orient=HORIZONTAL, length=150, mode='determinate')
-pb1.place(x=0,y=220)
+pb1.place(x=0,y=230)
 
 value_label = ttk.Label(root, text=update_progress_label())
 value_label.place(x=0,y=260)
@@ -445,13 +465,13 @@ baseImgdims.place(x=173, y=620)
 
 outputFrame.place(x=773, y=105)
 disp_img2.place(x=776, y=130)
-outputimglabel = tk.Label(
+previewimglabel = tk.Label(
     tab1,
-    text="1:1 pixel scale", 
+    text="1:1 scale", 
     bd=2, 
     relief=SUNKEN
 )  
-outputimglabel.place(x=773, y=620)
+previewimglabel.place(x=773, y=620)
 
 
 openimgfilename.place(x=173, y=15)
@@ -469,4 +489,3 @@ baseFramedecode.place(x=173, y=105)
 
 # run the application
 root.mainloop()
-
