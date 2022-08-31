@@ -528,6 +528,15 @@ baseFramedecode.place(x=173, y=105)
 
 
 # Tab 3 ##############################################################
+open_audio_button2 = tk.Button(
+    tab3,
+    text='Open an audio file',
+    height = 2, 
+    width=20,
+    command=select_audio_file
+)
+open_audio_button2.place(x=0, y=5)
+
 encryptbutton = tk.Button(
     tab3,
     text='Encrypt audio data',
@@ -535,20 +544,29 @@ encryptbutton = tk.Button(
     width=20,
     command=encrypting
 )
-encryptbutton.place(x=0, y=5)
+encryptbutton.place(x=0, y=55)
 
-inputtextkey = tk.Entry(tab3)#, height=1, width=20, )
-inputtextkey.place(x=0, y=55)
+saveencryptbutton = tk.Button(
+    tab3,
+    text='Save encyrpted audio',
+    height = 2, 
+    width=20,
+    command=encrypting
+)
+saveencryptbutton.place(x=0, y=105)
+
+inputtextkey = tk.Entry(tab3, width=24)
+inputtextkey.place(x=0, y=155)
 
 textBox = tk.Entry(tab3)
 textBox.insert(0, "acb123")
-textBox.place(x=0, y=55)
+textBox.place(x=0, y=155)
 
 pb2 = ttk.Progressbar(tab3, orient=HORIZONTAL, length=150, mode='determinate')
-pb2.place(x=0,y=205)
+pb2.place(x=0,y=185)
 
 pb2_label = ttk.Label(tab3, text=update_pb2_label())
-pb2_label.place(x=0,y=235)
+pb2_label.place(x=0,y=215)
 
 #LOD_slider.place(x=173, y=105)
 
