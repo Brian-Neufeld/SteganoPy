@@ -1,8 +1,3 @@
-from cgitb import enable
-from cmath import nan
-from faulthandler import disable
-from pickletools import uint8
-from sre_parse import State
 import numpy as np
 import PIL
 from tkinter import *
@@ -14,6 +9,8 @@ from tkinter.messagebox import showinfo
 import time
 import math
 import pydub
+import encryptionmodule
+from time import perf_counter
 
 imgwidth = 0
 imgheight = 0
@@ -122,6 +119,8 @@ def select_image_file():
 
 def select_audio_file():
     global audiofilename
+    global audioarray
+
     filetypes = (
         ("Audio files", ("*.mp3")),
         ("All files", "*.*")
@@ -149,18 +148,25 @@ def select_audio_file():
 
     openaudiofilename.config(text=audiofilename.split("/")[-1])
 
+    audioclip = pydub.AudioSegment.from_mp3(audiofilename)
+    audioarray = np.array(audioclip.get_array_of_samples())
+    audioarray = audioarray + (2**16)/2
+    audioarray = np.rint((audioarray / 2**16) * 999)
+
     return audiofilename
 
 def previewEncode():
+    preview.config(state=DISABLED)
+
     im = Image.open(imgfilename)
           
     a = np.array(im)
     a[0][0][0] = 0
 
-    audioclip = pydub.AudioSegment.from_mp3(audiofilename)
-    audioarray = np.array(audioclip.get_array_of_samples())
-    audioarray = audioarray + (2**16)/2
-    audioarray = np.rint((audioarray / 2**16) * 999)
+    #audioclip = pydub.AudioSegment.from_mp3(audiofilename)
+    #audioarray = np.array(audioclip.get_array_of_samples())
+    #audioarray = audioarray + (2**16)/2
+    #audioarray = np.rint((audioarray / 2**16) * 999)
 
     pb1["value"] = 0
     value_label['text'] = "                                            "
@@ -236,9 +242,11 @@ def previewEncode():
 
     if imgheight > 500:
         imgheight = 500
-        
-    previewimglabel.place_configure(y=imgheight+120)
 
+    previewimglabel.place_configure(y=imgheight+120)
+    preview.config(state="normal")
+
+    
 
 def encoding():
     
@@ -247,19 +255,18 @@ def encoding():
 
     f = fd.asksaveasfile(mode='w', defaultextension=".png")
 
-    print(str(f.name))
-
     im = Image.open(imgfilename)
     
         
     a = np.array(im)
 
-    audioclip = pydub.AudioSegment.from_mp3(audiofilename)
-    audioarray = np.array(audioclip.get_array_of_samples())
-    audioarray = audioarray + (2**16)/2
-    audioarray = np.rint((audioarray / 2**16) * 999)
 
-    #print(len(a))
+    #audioclip = pydub.AudioSegment.from_mp3(audiofilename)
+    #audioarray = np.array(audioclip.get_array_of_samples())
+    #audioarray = audioarray + (2**16)/2
+    #audioarray = np.rint((audioarray / 2**16) * 999)
+
+    
 
     pb1["value"] = 0
     value_label['text'] = "                                            "
@@ -334,6 +341,46 @@ def decoding():
 
 def update_progress_label():
     return f"Current Progress: {round(pb1['value'],2)}%"
+
+def update_pb2_label():
+    return f"Current Progress: {round(pb2['value'],2)}%"
+
+def encrypting():
+    start = perf_counter()
+    global audioarray
+
+    pb2["value"] = 0
+    pb2_label['text'] = "                                            "
+    root.update_idletasks()
+
+    #print("key:")
+    #print(int(textBox.get(),16))
+    audioarrayencrypted = audioarray
+
+    percentofaudio = round(len(audioarray) * .001) 
+    #print(percentofaudio)
+
+    for x in range(len(audioarray)):
+        audioarrayencrypted[x] = encryptionmodule.encrypt(int(textBox.get(),16), int(audioarray[x]), x)
+
+        
+        
+        if x > 0:
+            if x % percentofaudio == 0: 
+                
+                pb2["value"] += 0.1
+                pb2_label['text'] = update_pb2_label()
+                root.update_idletasks()
+
+    audioarray = audioarrayencrypted
+
+    pb2["value"] = 100
+    pb2_label['text'] = update_pb2_label()
+    root.update_idletasks()
+
+    duration = perf_counter() - start
+    print('{} took {:.3f} seconds\n\n'.format("c++", duration))
+
 
 
 open_img_button = tk.Button(
@@ -453,11 +500,11 @@ encode_button.place(x=0, y=155)
 decode_button.place(x=0, y=55)
 
 
-pb1 = ttk.Progressbar(root, orient=HORIZONTAL, length=150, mode='determinate')
-pb1.place(x=0,y=230)
+pb1 = ttk.Progressbar(tab1, orient=HORIZONTAL, length=150, mode='determinate')
+pb1.place(x=0,y=205)
 
-value_label = ttk.Label(root, text=update_progress_label())
-value_label.place(x=0,y=260)
+value_label = ttk.Label(tab1, text=update_progress_label())
+value_label.place(x=0,y=235)
 
 inputimgFrame.place(x=173, y=105)
 disp_inputimg.place(x=176, y=130)
@@ -479,6 +526,29 @@ openaudiofilename.place(x=173, y=65)
 
 baseFramedecode.place(x=173, y=105)
 
+
+# Tab 3 ##############################################################
+encryptbutton = tk.Button(
+    tab3,
+    text='Encrypt audio data',
+    height = 2, 
+    width=20,
+    command=encrypting
+)
+encryptbutton.place(x=0, y=5)
+
+inputtextkey = tk.Entry(tab3)#, height=1, width=20, )
+inputtextkey.place(x=0, y=55)
+
+textBox = tk.Entry(tab3)
+textBox.insert(0, "acb123")
+textBox.place(x=0, y=55)
+
+pb2 = ttk.Progressbar(tab3, orient=HORIZONTAL, length=150, mode='determinate')
+pb2.place(x=0,y=205)
+
+pb2_label = ttk.Label(tab3, text=update_pb2_label())
+pb2_label.place(x=0,y=235)
 
 #LOD_slider.place(x=173, y=105)
 
