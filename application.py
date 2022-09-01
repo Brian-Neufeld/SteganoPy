@@ -14,8 +14,9 @@ from pydub.playback import play
 import encryptionmodule
 from time import perf_counter
 import scipy
+import pygame
 
-
+pygame.mixer.init(frequency=44100, size=-16, channels=1)
 
 imgwidth = 0
 imgheight = 0
@@ -155,8 +156,8 @@ def select_audio_file():
 
     audioclip = pydub.AudioSegment.from_mp3(audiofilename)
     audioarray = np.array(audioclip.get_array_of_samples())
-    audioarray = audioarray + (2**16)/2
-    audioarray = np.rint((audioarray / 2**16) * 999)
+    #audioarray = audioarray + (2**16)/2
+    #audioarray = np.rint((audioarray / 2**16) * 999)
 
     return audiofilename
 
@@ -385,9 +386,14 @@ def encrypting():
     print('{} took {:.3f} seconds\n\n'.format("c++", duration))
 
 def playaudio():
-    y = np.int16(audioarray)
-    audiotoplay = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
-    play(audiotoplay)
+    audioarray2 = np.repeat(audioarray.reshape(len(audioarray), 1), 2, axis = 1)
+    audioarray2 = audioarray2.astype("int16")
+    audiotoplay = pygame.sndarray.make_sound(audioarray2)
+    #pygame.mixer.music.load(audiotoplay)
+    audiotoplay.play(loops=0)
+
+def stopaudio():
+    pygame.mixer.stop()
 
 open_img_button = tk.Button(
     tab1,
@@ -543,23 +549,25 @@ open_audio_button2 = tk.Button(
 )
 open_audio_button2.place(x=0, y=5)
 
-encryptbutton = tk.Button(
-    tab3,
-    text='Encrypt audio data',
-    height = 2, 
-    width=20,
-    command=encrypting
-)
-encryptbutton.place(x=0, y=55)
-
 saveencryptbutton = tk.Button(
     tab3,
-    text='Save encyrpted audio',
+    text='Play audio',
     height = 2, 
     width=20,
     command=playaudio
 )
-saveencryptbutton.place(x=0, y=105)
+saveencryptbutton.place(x=0, y=55)
+
+encryptbutton = tk.Button(
+    tab3,
+    text='Stop audio',
+    height = 2, 
+    width=20,
+    command=stopaudio
+)
+encryptbutton.place(x=0, y=105)
+
+
 
 inputtextkey = tk.Entry(tab3, width=24, bd=2)
 inputtextkey.place(x=0, y=155)
