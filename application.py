@@ -1,3 +1,4 @@
+from email.mime import audio
 import numpy as np
 import PIL
 from tkinter import *
@@ -9,8 +10,12 @@ from tkinter.messagebox import showinfo
 import time
 import math
 import pydub
+from pydub.playback import play
 import encryptionmodule
 from time import perf_counter
+import scipy
+
+
 
 imgwidth = 0
 imgheight = 0
@@ -244,9 +249,7 @@ def previewEncode():
         imgheight = 500
 
     previewimglabel.place_configure(y=imgheight+120)
-    preview.config(state="normal")
-
-    
+    preview.config(state="normal")   
 
 def encoding():
     
@@ -381,7 +384,10 @@ def encrypting():
     duration = perf_counter() - start
     print('{} took {:.3f} seconds\n\n'.format("c++", duration))
 
-
+def playaudio():
+    y = np.int16(audioarray)
+    audiotoplay = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
+    play(audiotoplay)
 
 open_img_button = tk.Button(
     tab1,
@@ -551,14 +557,14 @@ saveencryptbutton = tk.Button(
     text='Save encyrpted audio',
     height = 2, 
     width=20,
-    command=encrypting
+    command=playaudio
 )
 saveencryptbutton.place(x=0, y=105)
 
-inputtextkey = tk.Entry(tab3, width=24)
+inputtextkey = tk.Entry(tab3, width=24, bd=2)
 inputtextkey.place(x=0, y=155)
 
-textBox = tk.Entry(tab3)
+textBox = tk.Entry(tab3, width=24, bd=2)
 textBox.insert(0, "acb123")
 textBox.place(x=0, y=155)
 
@@ -567,6 +573,16 @@ pb2.place(x=0,y=185)
 
 pb2_label = ttk.Label(tab3, text=update_pb2_label())
 pb2_label.place(x=0,y=215)
+
+audiowaveformFrame = tk.Frame(
+    tab3,
+    width=(1000), 
+    height=(250), 
+    bd=2, 
+    relief=SUNKEN
+)
+
+audiowaveformFrame.place(x=173, y=5)
 
 #LOD_slider.place(x=173, y=105)
 
