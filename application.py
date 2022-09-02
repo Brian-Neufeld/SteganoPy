@@ -15,6 +15,9 @@ import encryptionmodule
 from time import perf_counter
 import scipy
 import pygame
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+import matplotlib.pyplot as plt
 
 pygame.mixer.init(frequency=44100, size=-16, channels=1)
 
@@ -153,11 +156,14 @@ def select_audio_file():
         decode_button.config(state="normal")
 
     openaudiofilename.config(text=audiofilename.split("/")[-1])
+    openaudiofilename2.config(text=audiofilename.split("/")[-1])
 
     audioclip = pydub.AudioSegment.from_mp3(audiofilename)
     audioarray = np.array(audioclip.get_array_of_samples())
     #audioarray = audioarray + (2**16)/2
     #audioarray = np.rint((audioarray / 2**16) * 999)
+
+    plotaudio()
 
     return audiofilename
 
@@ -349,7 +355,7 @@ def update_progress_label():
 def update_pb2_label():
     return f"Current Progress: {round(pb2['value'],2)}%"
 
-def encrypting():
+def encrypt_audio():
     start = perf_counter()
     global audioarray
 
@@ -394,6 +400,43 @@ def playaudio():
 
 def stopaudio():
     pygame.mixer.stop()
+
+
+def plotaudio():
+  
+    # the figure that will contain the plot
+    fig = Figure(figsize = (12, 3), dpi = 100)
+  
+    # list of squares
+    #y = audioarray
+    
+    # adding the subplot
+    #plot1 = fig.add_subplot(111)
+  
+    # plotting the graph
+    plot1 = fig.add_subplot(111)
+  
+    audioplt = plot1.plot(audioarray)
+  
+    # creating the Tkinter canvas
+    # containing the Matplotlib figure
+    canvas = FigureCanvasTkAgg(fig, master = tab3)  
+    canvas.draw()
+  
+    # placing the canvas on the Tkinter window
+    canvas.get_tk_widget().place(x=173, y = 5)
+  
+    # creating the Matplotlib toolbar
+    toolbar = NavigationToolbar2Tk(canvas, tab3)
+    toolbar.update()
+  
+    # placing the toolbar on the Tkinter window
+    canvas.get_tk_widget().place(x=173, y = 5)
+
+    
+
+
+
 
 open_img_button = tk.Button(
     tab1,
@@ -549,48 +592,64 @@ open_audio_button2 = tk.Button(
 )
 open_audio_button2.place(x=0, y=5)
 
-saveencryptbutton = tk.Button(
+openaudiofilename2 = tk.Label(
+    tab3,
+    text="None Selected", 
+    bd=2, 
+    relief=SUNKEN
+)  
+openaudiofilename2.place(x=173, y=15)
+
+playaudiobutton = tk.Button(
     tab3,
     text='Play audio',
     height = 2, 
     width=20,
     command=playaudio
 )
-saveencryptbutton.place(x=0, y=55)
+playaudiobutton.place(x=0, y=55)
 
-encryptbutton = tk.Button(
+stopaudiobutton = tk.Button(
     tab3,
     text='Stop audio',
     height = 2, 
     width=20,
     command=stopaudio
 )
-encryptbutton.place(x=0, y=105)
+stopaudiobutton.place(x=0, y=105)
 
+encryptaudiobutton = tk.Button(
+    tab3,
+    text='Encrypt audio',
+    height = 2, 
+    width=20,
+    command=encrypt_audio
+)
+encryptaudiobutton.place(x=0, y=155)
 
 
 inputtextkey = tk.Entry(tab3, width=24, bd=2)
-inputtextkey.place(x=0, y=155)
+inputtextkey.place(x=0, y=205)
 
 textBox = tk.Entry(tab3, width=24, bd=2)
 textBox.insert(0, "acb123")
-textBox.place(x=0, y=155)
+textBox.place(x=0, y=205)
 
 pb2 = ttk.Progressbar(tab3, orient=HORIZONTAL, length=150, mode='determinate')
-pb2.place(x=0,y=185)
+pb2.place(x=0,y=235)
 
 pb2_label = ttk.Label(tab3, text=update_pb2_label())
-pb2_label.place(x=0,y=215)
+pb2_label.place(x=0,y=265)
 
-audiowaveformFrame = tk.Frame(
-    tab3,
-    width=(1000), 
-    height=(250), 
-    bd=2, 
-    relief=SUNKEN
-)
+#audiowaveformFrame = tk.Frame(
+#    tab3,
+#    width=(1000), 
+#    height=(250), 
+#    bd=2, 
+#    relief=SUNKEN
+#)
 
-audiowaveformFrame.place(x=173, y=5)
+#audiowaveformFrame.place(x=173, y=55)
 
 #LOD_slider.place(x=173, y=105)
 
