@@ -26,7 +26,15 @@ imgheight = 0
 wscale = 1
 hscale = 1
 
+
+encodedimgwidth = 0
+encodedimgheight = 0
+encodedwscale = 1
+encodedhscale = 1
+
+
 imgfilename = 1
+encodedimgfilename = 1
 audiofilename = 1
 
 
@@ -56,6 +64,7 @@ def select_image_file():
     global img1
     global imgwidth
     global imgheight, wscale, hscale
+    
     filetypes = (
         ("Image files", ("*.jpg", "*.png")),
         ("All files", "*.*")
@@ -125,6 +134,69 @@ def select_image_file():
 
     
     return imgfilename
+
+def select_encoded_image_file():
+    global encodedimgfilename
+    global encodedimg
+    global encodedimg1
+    global encodedimgwidth, encodedimgheight, encodedwscale, encodedhscale
+
+    filetypes = (
+        ("Image files", ("*.jpg", "*.png")),
+        ("All files", "*.*")
+    )
+
+    encodedimgfilename = fd.askopenfilename(
+        title = "Open a File",
+        initialdir="/",
+        filetypes=filetypes
+    )
+
+    if encodedimgfilename == "":
+        return
+
+    encodedimgfilename = "".join(encodedimgfilename)
+    
+
+
+    encodedimg = Image.open(encodedimgfilename)
+    encodedimg1 = ImageTk.PhotoImage(encodedimg)
+
+    openencodedimgfilename.config(text=encodedimgfilename.split("/")[-1])
+
+    encodedimgwidth = encodedimg1.width()
+    encodedimgheight = encodedimg1.height()
+
+    
+
+    if encodedimgwidth > encodedimgheight:
+        encodedwscale = 1
+        encodedhscale = encodedimgheight / encodedimgwidth
+    elif encodedimgheight > encodedimgwidth:
+        encodedhscale = 1
+        encodedwscale = encodedimgwidth / encodedimgheight
+    elif encodedimgwidth == encodedimgheight:
+        encodedwscale = 1
+        encodedhscale = 1
+    
+    print(encodedwscale)
+    print(encodedhscale)
+
+    encodedw = int(500 * encodedwscale)
+    encodedh = int(500 * encodedhscale)
+    resize_img = encodedimg.resize((encodedw, encodedh))
+    encodedimg = ImageTk.PhotoImage(resize_img)
+    disp_encodedimg.config(image=encodedimg)
+    disp_encodedimg.image = encodedimg
+
+
+    baseImgdims.config(text = f'witdth: {imgwidth} height: {imgheight}')
+    baseImgdims.place_configure(y=500*hscale+120)
+    
+    baseFrameencoded.config(width=(500*encodedwscale+8), height=(500*encodedhscale+8))
+
+    
+    return encodedimgfilename
 
 def select_audio_file():
     global audiofilename
@@ -401,11 +473,14 @@ def playaudio():
 def stopaudio():
     pygame.mixer.stop()
 
-
 def plotaudio():
+
+    
   
     # the figure that will contain the plot
     fig = Figure(figsize = (12, 3), dpi = 100)
+
+    fig.clear()
   
     # list of squares
     #y = audioarray
@@ -431,13 +506,14 @@ def plotaudio():
     toolbar.update()
   
     # placing the toolbar on the Tkinter window
-    canvas.get_tk_widget().place(x=173, y = 5)
+    toolbar.place(x=173, y = 305)
+
+
 
     
 
 
-
-
+# Tab 1 ##############################################################
 open_img_button = tk.Button(
     tab1,
     text='Open an image file',
@@ -445,14 +521,7 @@ open_img_button = tk.Button(
     width=20,
     command=select_image_file
 )
-
-open_img_button2 = tk.Button(
-    tab2,
-    text='Open an image file',
-    height = 2, 
-    width=20,
-    command=select_image_file
-)
+open_img_button.place(x=0, y=5)
 
 open_audio_button = tk.Button(
     tab1,
@@ -461,6 +530,7 @@ open_audio_button = tk.Button(
     width=20,
     command=select_audio_file
 )
+open_audio_button.place(x=0, y=55)
 
 preview = tk.Button(
     tab1,
@@ -469,6 +539,7 @@ preview = tk.Button(
     width=20,
     command=previewEncode
 )
+preview.place(x=0, y=105)
 
 encode_button = tk.Button(
     tab1,
@@ -477,28 +548,15 @@ encode_button = tk.Button(
     width=20,
     command=encoding
 )
-
-decode_button = tk.Button(
-    tab2,
-    text='Decode',
-    height = 2, 
-    width=20,
-    command=decoding
-)
+encode_button.place(x=0, y=155)
 
 baseImgdims = tk.Label(
     tab1,
     text=f'witdth: {imgwidth} height: {imgheight}', 
     bd=2, 
     relief=SUNKEN
-)  
-
-openaudiofilename = tk.Label(
-    tab1,
-    text="None Selected", 
-    bd=2, 
-    relief=SUNKEN
-)  
+)
+baseImgdims.place(x=173, y=620)
 
 openimgfilename = tk.Label(
     tab1,
@@ -506,7 +564,15 @@ openimgfilename = tk.Label(
     bd=2, 
     relief=SUNKEN
 )  
+openimgfilename.place(x=173, y=15)
 
+openaudiofilename = tk.Label(
+    tab1,
+    text="None Selected", 
+    bd=2, 
+    relief=SUNKEN
+)  
+openaudiofilename.place(x=173, y=65)
 
 inputimgFrame = tk.Frame(
     tab1,
@@ -515,18 +581,10 @@ inputimgFrame = tk.Frame(
     bd=2, 
     relief=SUNKEN
 )
+inputimgFrame.place(x=173, y=105)
 
-disp_inputimg = tk.Label()
-
-baseFramedecode = tk.Frame(
-    tab2, 
-    width=(500*wscale+8), 
-    height=(500*hscale+8), 
-    bd=2, 
-    relief=SUNKEN
-)
-
-disp_img3 = tk.Label()
+disp_inputimg = tk.Label(tab1)
+disp_inputimg.place(x=175, y=107)
 
 outputFrame = tk.Frame(
     tab1, 
@@ -535,38 +593,8 @@ outputFrame = tk.Frame(
     bd=2, 
     relief=SUNKEN
 )
-
-disp_img2 = tk.Label()
-
-#LOD_slider = Scale(tab1, from_=0, to=10, orient=HORIZONTAL)
-
-open_img_button.place(x=0, y=5)
-open_img_button2.place(x=0, y=5)
-
-open_audio_button.place(x=0, y=55)
-
-preview.place(x=0, y=105)
-if imgfilename == 1 or audiofilename == 1:
-    preview.config(state=DISABLED)
-    encode_button.config(state=DISABLED)
-    decode_button.config(state=DISABLED)
-
-encode_button.place(x=0, y=155)
-decode_button.place(x=0, y=55)
-
-
-pb1 = ttk.Progressbar(tab1, orient=HORIZONTAL, length=150, mode='determinate')
-pb1.place(x=0,y=205)
-
-value_label = ttk.Label(tab1, text=update_progress_label())
-value_label.place(x=0,y=235)
-
-inputimgFrame.place(x=173, y=105)
-disp_inputimg.place(x=176, y=130)
-baseImgdims.place(x=173, y=620)
-
 outputFrame.place(x=773, y=105)
-disp_img2.place(x=776, y=130)
+
 previewimglabel = tk.Label(
     tab1,
     text="1:1 scale", 
@@ -576,10 +604,86 @@ previewimglabel = tk.Label(
 previewimglabel.place(x=773, y=620)
 
 
-openimgfilename.place(x=173, y=15)
-openaudiofilename.place(x=173, y=65)
 
-baseFramedecode.place(x=173, y=105)
+
+
+disp_img2 = tk.Label(tab1)
+disp_img2.place(x=775, y=107)
+
+pb1 = ttk.Progressbar(tab1, orient=HORIZONTAL, length=150, mode='determinate')
+pb1.place(x=0,y=205)
+
+value_label = ttk.Label(tab1, text=update_progress_label())
+value_label.place(x=0,y=235)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Tab 2 ##############################################################
+open_encoded_img_button = tk.Button(
+    tab2,
+    text='Open an image file',
+    height = 2, 
+    width=20,
+    command=select_encoded_image_file
+)
+open_encoded_img_button.place(x=0, y=5)
+
+decode_button = tk.Button(
+    tab2,
+    text='Decode',
+    height = 2, 
+    width=20,
+    command=decoding
+)
+
+
+openencodedimgfilename = tk.Label(
+    tab2,
+    text="None Selected", 
+    bd=2, 
+    relief=SUNKEN
+)  
+openencodedimgfilename.place(x=173, y=15)
+
+
+
+baseFrameencoded = tk.Frame(
+    tab2, 
+    width=(500*wscale+8), 
+    height=(500*hscale+8), 
+    bd=2, 
+    relief=SUNKEN
+)
+
+disp_encodedimg = tk.Label(tab2)
+disp_encodedimg.place(x=175, y=107)
+
+#LOD_slider = Scale(tab1, from_=0, to=10, orient=HORIZONTAL)
+
+baseFrameencoded.place(x=173, y=105)
+
+
+
+decode_button.place(x=0, y=55)
+
+
+
+
+
+
+
 
 
 # Tab 3 ##############################################################
@@ -657,6 +761,10 @@ pb2_label.place(x=0,y=265)
 
 #open_button.pack(expand=True)
 
+if imgfilename == 1 or audiofilename == 1:
+    preview.config(state=DISABLED)
+    encode_button.config(state=DISABLED)
+    decode_button.config(state=DISABLED)
 
 # run the application
 root.mainloop()
