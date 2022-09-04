@@ -430,6 +430,7 @@ def update_pb2_label():
 def encrypt_audio():
     start = perf_counter()
     global audioarray
+    global audioarrayencrypted
 
     pb2["value"] = 0
     pb2_label['text'] = "                                            "
@@ -454,7 +455,7 @@ def encrypt_audio():
                 pb2_label['text'] = update_pb2_label()
                 root.update_idletasks()
 
-    audioarray = audioarrayencrypted
+
 
     pb2["value"] = 100
     pb2_label['text'] = update_pb2_label()
@@ -462,6 +463,8 @@ def encrypt_audio():
 
     duration = perf_counter() - start
     print('{} took {:.3f} seconds\n\n'.format("c++", duration))
+
+    plotencryptedaudio()
 
 def playaudio():
     audioarray2 = np.repeat(audioarray.reshape(len(audioarray), 1), 2, axis = 1)
@@ -508,7 +511,40 @@ def plotaudio():
     # placing the toolbar on the Tkinter window
     toolbar.place(x=173, y = 305)
 
+def plotencryptedaudio():
+    global audioarrayencrypted
+    
+  
+    # the figure that will contain the plot
+    fig2 = Figure(figsize = (12, 3), dpi = 100)
 
+    fig2.clear()
+  
+    # list of squares
+    #y = audioarray
+    
+    # adding the subplot
+    #plot1 = fig.add_subplot(111)
+  
+    # plotting the graph
+    plot2 = fig2.add_subplot(111)
+  
+    audioplt = plot2.plot(audioarrayencrypted)
+  
+    # creating the Tkinter canvas
+    # containing the Matplotlib figure
+    canvas = FigureCanvasTkAgg(fig2, master = tab3)  
+    canvas.draw()
+  
+    # placing the canvas on the Tkinter window
+    canvas.get_tk_widget().place(x=173, y = 350)
+  
+    # creating the Matplotlib toolbar
+    toolbar = NavigationToolbar2Tk(canvas, tab3)
+    toolbar.update()
+  
+    # placing the toolbar on the Tkinter window
+    toolbar.place(x=173, y = 650)
 
     
 
