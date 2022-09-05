@@ -39,7 +39,7 @@ audiofilename = 1
 
 
 root = Tk()
-root.geometry('1368x720')
+root.geometry('1500x850')
 #root.attributes('-fullscreen', True)
 #root.resizable(0,0)
 root.title("SteganoPy")
@@ -203,7 +203,7 @@ def select_audio_file():
     global audioarray
 
     filetypes = (
-        ("Audio files", ("*.mp3")),
+        ("Audio files", ("*.mp3", "*.wav")),
         ("All files", "*.*")
     )
 
@@ -428,9 +428,9 @@ def update_pb2_label():
     return f"Current Progress: {round(pb2['value'],2)}%"
 
 def encrypt_audio():
-    start = perf_counter()
+    #start = perf_counter()
     global audioarray
-    global audioarrayencrypted
+    global audioarrayoutput
 
     pb2["value"] = 0
     pb2_label['text'] = "                                            "
@@ -438,13 +438,90 @@ def encrypt_audio():
 
     #print("key:")
     #print(int(textBox.get(),16))
-    audioarrayencrypted = audioarray
+    
+    audioarrayoutput = np.zeros(len(audioarray))
+    
 
-    percentofaudio = round(len(audioarray) * .001) 
-    #print(percentofaudio)
+    percentofaudio = round(len(audioarrayoutput) * .001) 
+
+    key = int(textBox.get(),16)
+
+    if key.bit_length() < 64:
+        key1 = str(bin(key))
+        key1 = key1[2:]
+
+        key1 += "1"
+
+        while len(key1) < 64:
+            key1 += "0"
+
+
+        initializedKey = str(key1)
+
+        intkey = int(key1,2)
 
     for x in range(len(audioarray)):
-        audioarrayencrypted[x] = encryptionmodule.encrypt(int(textBox.get(),16), int(audioarray[x]), x)
+        audioarrayoutput[x] = encryptionmodule.encrypt(intkey, int(audioarray[x]), x)
+
+        
+        
+        if x > 0:
+            if x % percentofaudio == 0: 
+                
+                pb2["value"] += 0.1
+                pb2_label['text'] = update_pb2_label()
+                root.update_idletasks()
+
+    print(audioarray)
+
+    pb2["value"] = 100
+    pb2_label['text'] = update_pb2_label()
+    root.update_idletasks()
+
+    #duration = perf_counter() - start
+    #print('{} took {:.3f} seconds\n\n'.format("c++", duration))
+
+    plotoutputaudio()
+    return audioarrayoutput
+
+def decrypt_audio():
+    #start = perf_counter()
+    global audioarray
+    global audioarrayoutput
+
+    pb2["value"] = 0
+    pb2_label['text'] = "                                            "
+    root.update_idletasks()
+
+    #print("key:")
+    #print(int(textBox.get(),16))
+    
+    audioarrayoutput = np.zeros(len(audioarray))
+    
+
+    percentofaudio = round(len(audioarrayoutput) * .001) 
+
+    key = int(textBox.get(),16)
+
+    if key.bit_length() < 64:
+        key1 = str(bin(key))
+        key1 = key1[2:]
+
+        key1 += "1"
+
+        while len(key1) < 64:
+            key1 += "0"
+
+
+        initializedKey = str(key1)
+
+        intkey = int(key1,2)
+    
+    
+    
+
+    for x in range(len(audioarray)):
+        audioarrayoutput[x] = encryptionmodule.decrypt(intkey, int(audioarray[x]), x)
 
         
         
@@ -456,21 +533,26 @@ def encrypt_audio():
                 root.update_idletasks()
 
 
-
     pb2["value"] = 100
     pb2_label['text'] = update_pb2_label()
     root.update_idletasks()
 
-    duration = perf_counter() - start
-    print('{} took {:.3f} seconds\n\n'.format("c++", duration))
+    #duration = perf_counter() - start
+    #print('{} took {:.3f} seconds\n\n'.format("c++", duration))
 
-    plotencryptedaudio()
+    plotoutputaudio()
+    return audioarrayoutput
 
 def playaudio():
     audioarray2 = np.repeat(audioarray.reshape(len(audioarray), 1), 2, axis = 1)
     audioarray2 = audioarray2.astype("int16")
     audiotoplay = pygame.sndarray.make_sound(audioarray2)
-    #pygame.mixer.music.load(audiotoplay)
+    audiotoplay.play(loops=0)
+
+def playoutputaudio():
+    audioarray2 = np.repeat(audioarrayoutput.reshape(len(audioarrayoutput), 1), 2, axis = 1)
+    audioarray2 = audioarray2.astype("int16")
+    audiotoplay = pygame.sndarray.make_sound(audioarray2)
     audiotoplay.play(loops=0)
 
 def stopaudio():
@@ -485,16 +567,13 @@ def plotaudio():
 
     fig.clear()
   
-    # list of squares
-    #y = audioarray
     
-    # adding the subplot
-    #plot1 = fig.add_subplot(111)
+    Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
   
     # plotting the graph
     plot1 = fig.add_subplot(111)
   
-    audioplt = plot1.plot(audioarray)
+    audioplt = plot1.plot(Time, audioarray)
   
     # creating the Tkinter canvas
     # containing the Matplotlib figure
@@ -502,17 +581,17 @@ def plotaudio():
     canvas.draw()
   
     # placing the canvas on the Tkinter window
-    canvas.get_tk_widget().place(x=173, y = 5)
+    canvas.get_tk_widget().place(x=173, y = 55)
   
     # creating the Matplotlib toolbar
     toolbar = NavigationToolbar2Tk(canvas, tab3)
     toolbar.update()
   
     # placing the toolbar on the Tkinter window
-    toolbar.place(x=173, y = 305)
+    toolbar.place(x=173, y = 355)
 
-def plotencryptedaudio():
-    global audioarrayencrypted
+def plotoutputaudio():
+    global audioarrayoutput
     
   
     # the figure that will contain the plot
@@ -529,7 +608,7 @@ def plotencryptedaudio():
     # plotting the graph
     plot2 = fig2.add_subplot(111)
   
-    audioplt = plot2.plot(audioarrayencrypted)
+    audioplt = plot2.plot(audioarrayoutput)
   
     # creating the Tkinter canvas
     # containing the Matplotlib figure
@@ -537,16 +616,19 @@ def plotencryptedaudio():
     canvas.draw()
   
     # placing the canvas on the Tkinter window
-    canvas.get_tk_widget().place(x=173, y = 350)
+    canvas.get_tk_widget().place(x=173, y = 405)
   
     # creating the Matplotlib toolbar
     toolbar = NavigationToolbar2Tk(canvas, tab3)
     toolbar.update()
   
     # placing the toolbar on the Tkinter window
-    toolbar.place(x=173, y = 650)
+    toolbar.place(x=173, y = 705)
 
-    
+def Exportaudio():
+    y = np.int16(audioarrayoutput)
+    song = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
+    song.export("Exported Audio.wav", format="wav", bitrate="48k") 
 
 
 # Tab 1 ##############################################################
@@ -654,18 +736,6 @@ value_label.place(x=0,y=235)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 # Tab 2 ##############################################################
 open_encoded_img_button = tk.Button(
     tab2,
@@ -749,6 +819,15 @@ playaudiobutton = tk.Button(
 )
 playaudiobutton.place(x=0, y=55)
 
+playoutputaudiobutton = tk.Button(
+    tab3,
+    text='Play output audio',
+    height = 2, 
+    width=20,
+    command=playoutputaudio
+)
+playoutputaudiobutton.place(x=0, y=105)
+
 stopaudiobutton = tk.Button(
     tab3,
     text='Stop audio',
@@ -756,7 +835,7 @@ stopaudiobutton = tk.Button(
     width=20,
     command=stopaudio
 )
-stopaudiobutton.place(x=0, y=105)
+stopaudiobutton.place(x=0, y=155)
 
 encryptaudiobutton = tk.Button(
     tab3,
@@ -765,21 +844,43 @@ encryptaudiobutton = tk.Button(
     width=20,
     command=encrypt_audio
 )
-encryptaudiobutton.place(x=0, y=155)
+encryptaudiobutton.place(x=0, y=225)
 
+decryptaudiobutton = tk.Button(
+    tab3,
+    text='Decrypt audio',
+    height = 2, 
+    width=20,
+    command=decrypt_audio
+)
+decryptaudiobutton.place(x=0, y=275)
+
+
+
+Exportoutputaudiobutton = tk.Button(
+    tab3,
+    text='Export audio',
+    height = 2, 
+    width=20,
+    command=Exportaudio
+)
+Exportoutputaudiobutton.place(x=0, y=325)
+
+pb2_label = ttk.Label(tab3, text="Encryption Key:")
+pb2_label.place(x=0,y=380)
 
 inputtextkey = tk.Entry(tab3, width=24, bd=2)
-inputtextkey.place(x=0, y=205)
+inputtextkey.place(x=0, y=405)
 
 textBox = tk.Entry(tab3, width=24, bd=2)
 textBox.insert(0, "acb123")
-textBox.place(x=0, y=205)
+textBox.place(x=0, y=405)
 
 pb2 = ttk.Progressbar(tab3, orient=HORIZONTAL, length=150, mode='determinate')
-pb2.place(x=0,y=235)
+pb2.place(x=0,y=435)
 
 pb2_label = ttk.Label(tab3, text=update_pb2_label())
-pb2_label.place(x=0,y=265)
+pb2_label.place(x=0,y=465)
 
 #audiowaveformFrame = tk.Frame(
 #    tab3,
@@ -801,6 +902,9 @@ if imgfilename == 1 or audiofilename == 1:
     preview.config(state=DISABLED)
     encode_button.config(state=DISABLED)
     decode_button.config(state=DISABLED)
+
+
+
 
 # run the application
 root.mainloop()
