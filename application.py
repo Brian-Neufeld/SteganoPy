@@ -18,6 +18,7 @@ import pygame
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 import matplotlib.pyplot as plt
+from tkinter import messagebox
 
 pygame.mixer.init(frequency=44100, size=-16, channels=1)
 
@@ -219,13 +220,18 @@ def select_audio_file():
     audiofilename = "".join(audiofilename)
 
     if imgfilename == 1 or audiofilename == 1:
-        preview.config(state="disabled")
-        encode_button.config(state="disabled")
-        decode_button.config(state="disabled")
+        preview.config(state=DISABLED)
+        encode_button.config(state=DISABLED)
+        decode_button.config(state=DISABLED)
     else:
-        preview.config(state="normal")
-        encode_button.config(state="normal")
-        decode_button.config(state="normal")
+        preview.config(state=NORMAL)
+        encode_button.config(state=NORMAL)
+        decode_button.config(state=NORMAL)
+
+    if audiofilename != 1:
+        playaudiobutton.config(state=NORMAL)
+        encryptaudiobutton.config(state=NORMAL)
+        decryptaudiobutton.config(state=NORMAL)
 
     openaudiofilename.config(text=audiofilename.split("/")[-1])
     openaudiofilename2.config(text=audiofilename.split("/")[-1])
@@ -445,6 +451,10 @@ def encrypt_audio():
     percentofaudio = round(len(audioarrayoutput) * .001) 
 
     key = int(textBox.get(),16)
+
+    if key.bit_length() > 64:
+        messagebox.showerror('Program Error', 'Error: Key size is greater than 64 bits')
+        return
 
     if key.bit_length() < 64:
         key1 = str(bin(key))
@@ -670,7 +680,7 @@ encode_button.place(x=0, y=155)
 
 baseImgdims = tk.Label(
     tab1,
-    text=f'witdth: {imgwidth} height: {imgheight}', 
+    text=f'width: {imgwidth} height: {imgheight}', 
     bd=2, 
     relief=SUNKEN
 )
@@ -866,14 +876,14 @@ Exportoutputaudiobutton = tk.Button(
 )
 Exportoutputaudiobutton.place(x=0, y=325)
 
-pb2_label = ttk.Label(tab3, text="Encryption Key:")
+pb2_label = ttk.Label(tab3, text="64 Bit Encryption Key:")
 pb2_label.place(x=0,y=380)
 
 inputtextkey = tk.Entry(tab3, width=24, bd=2)
 inputtextkey.place(x=0, y=405)
 
 textBox = tk.Entry(tab3, width=24, bd=2)
-textBox.insert(0, "acb123")
+textBox.insert(0, "abc123")
 textBox.place(x=0, y=405)
 
 pb2 = ttk.Progressbar(tab3, orient=HORIZONTAL, length=150, mode='determinate')
@@ -903,8 +913,17 @@ if imgfilename == 1 or audiofilename == 1:
     encode_button.config(state=DISABLED)
     decode_button.config(state=DISABLED)
 
+if audiofilename == 1:
+    playaudiobutton.config(state=DISABLED)
+    encryptaudiobutton.config(state=DISABLED)
+    decryptaudiobutton.config(state=DISABLED)
+    
 
-
+if "audioarrayoutput" in globals():
+    pass
+else:
+    playoutputaudiobutton.config(state=DISABLED)
+    Exportoutputaudiobutton.config(state=DISABLED)
 
 # run the application
 root.mainloop()
