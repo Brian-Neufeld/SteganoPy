@@ -451,9 +451,6 @@ def encrypt_audio():
 
     key = int(textBox.get(),16)
 
-    if key.bit_length() > 64:
-        messagebox.showerror('Program Error', 'Error: Key size is greater than 64 bits')
-        return
 
     if key.bit_length() < 64:
         key1 = str(bin(key))
@@ -464,10 +461,13 @@ def encrypt_audio():
         while len(key1) < 64:
             key1 += "0"
 
-
         initializedKey = str(key1)
-
         intkey = int(key1,2)
+    elif key.bit_length() == 64:
+        intkey = key
+    elif key.bit_length() > 64:
+        messagebox.showerror('Program Error', 'Error: Key size is greater than 64 bits')
+        return
 
     for x in range(len(audioarray)):
         audioarrayoutput[x] = encryptionmodule.encrypt(intkey, int(audioarray[x]), x)
@@ -489,6 +489,12 @@ def encrypt_audio():
 
     #duration = perf_counter() - start
     #print('{} took {:.3f} seconds\n\n'.format("c++", duration))
+
+    if "audioarrayoutput" in globals():
+        playoutputaudiobutton.config(state=NORMAL)
+        Exportoutputaudiobutton.config(state=NORMAL)
+    
+        
 
     plotoutputaudio()
     return audioarrayoutput
@@ -548,6 +554,10 @@ def decrypt_audio():
 
     #duration = perf_counter() - start
     #print('{} took {:.3f} seconds\n\n'.format("c++", duration))
+
+    if "audioarrayoutput" in globals():
+        playoutputaudiobutton.config(state=NORMAL)
+        Exportoutputaudiobutton.config(state=NORMAL)
 
     plotoutputaudio()
     return audioarrayoutput
@@ -613,11 +623,13 @@ def plotoutputaudio():
     
     # adding the subplot
     #plot1 = fig.add_subplot(111)
+
+    Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
   
     # plotting the graph
     plot2 = fig2.add_subplot(111)
   
-    audioplt = plot2.plot(audioarrayoutput)
+    audioplt = plot2.plot(Time, audioarrayoutput)
   
     # creating the Tkinter canvas
     # containing the Matplotlib figure
