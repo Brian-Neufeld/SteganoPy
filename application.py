@@ -21,11 +21,15 @@ from tkinter import messagebox
 
 pygame.mixer.init(frequency=44100, size=-16, channels=1)
 
+root = Tk()
+root.geometry('1500x850')
+root.title("SteganoPy")
+
+
 base_img_width = 0
 base_img_height = 0
 base_w_scale = 1
 base_h_scale = 1
-
 
 encoded_img_width = 0
 encoded_img_height = 0
@@ -37,10 +41,7 @@ base_img_filename = 1
 encoded_img_filename = 1
 audio_filename = 1
 
-
-root = Tk()
-root.geometry('1500x850')
-root.title("SteganoPy")
+encrypt_check = IntVar()
 
 tabControl = ttk.Notebook(root)
   
@@ -79,7 +80,7 @@ def select_image_file():
 
     base_img_filename = "".join(base_img_filename)
     
-
+    
 
     img = Image.open(base_img_filename)
     img1 = ImageTk.PhotoImage(img)
@@ -255,8 +256,8 @@ def preview_encoded_image():
     #audioarray = audioarray + (2**16)/2
     #audioarray = np.rint((audioarray / 2**16) * 999)
 
-    pb1["value"] = 0
-    value_label['text'] = "                                            "
+    progressbar_tab1["value"] = 0
+    pb_tab1_value_label['text'] = "                                            "
     root.update_idletasks()
     
     for x in range(len(a)):
@@ -284,12 +285,12 @@ def preview_encoded_image():
                             a[x][y][z] = colourValue
 
             if len(a) < 500:
-                pb1["value"] += 1/len(a) * 100
-                value_label['text'] = update_progress_label()
+                progressbar_tab1["value"] += 1/len(a) * 100
+                pb_tab1_value_label['text'] = update_progress_label()
                 root.update_idletasks()
             else:
-                pb1["value"] += 1/500 * 100
-                value_label['text'] = update_progress_label()
+                progressbar_tab1["value"] += 1/500 * 100
+                pb_tab1_value_label['text'] = update_progress_label()
                 root.update_idletasks()
 
 
@@ -349,10 +350,15 @@ def encoding():
 
     
 
-    pb1["value"] = 0
-    value_label['text'] = "                                            "
+    progressbar_tab1["value"] = 0
+    pb_tab1_value_label['text'] = "                                            "
     root.update_idletasks()
     
+    if encrypt_check.get() == 1:
+        encrypt_audio()
+        audioarray_to_encode = audio_array_output
+    elif encrypt_check.get() == 0:
+        audioarray_to_encode = audioarray
 
     for x in range(len(a)):
         #print(x)
@@ -365,8 +371,8 @@ def encoding():
 
                 a[x][y][z] = round(a[x][y][z]/10) * 10
                 
-                if x*len(a[x])+y < len(audioarray):
-                    digit = get_digit(audioarray[x*len(a[x])+y], z)
+                if x*len(a[x])+y < len(audioarray_to_encode):
+                    digit = get_digit(audioarray_to_encode[x*len(a[x])+y], z)
                     if a[x][y][z] == 250 and digit > 5:
                         a[x][y][z] = 240
                     colourValue = int(a[x][y][z]) + int(digit)
@@ -378,8 +384,8 @@ def encoding():
 
                 
                 #print(str(digit) + "  " + str(audioarray[x*len(a[x])+y]))
-        pb1["value"] += 1/len(a)*100
-        value_label['text'] = update_progress_label()
+        progressbar_tab1["value"] += 1/len(a)*100
+        pb_tab1_value_label['text'] = update_progress_label()
         root.update_idletasks()
         
     
@@ -421,7 +427,7 @@ def decoding():
     song.export("decoded audio.mp3", format="mp3", bitrate="48k")
 
 def update_progress_label():
-    return f"Current Progress: {round(pb1['value'],2)}%"
+    return f"Current Progress: {round(progressbar_tab1['value'],2)}%"
 
 def update_pb2_label():
     return f"Current Progress: {round(pb2['value'],2)}%"
@@ -742,18 +748,30 @@ preview_img_label = tk.Label(
 )  
 preview_img_label.place(x=773, y=620)
 
+checkbox_excrypt = Checkbutton(tab1, text = "Ecrypt Audio with Key", variable=encrypt_check)
+checkbox_excrypt.place(x=0, y=350)
 
 
+
+pb2_label = ttk.Label(tab1, text="64 Bit Encryption Key:")
+pb2_label.place(x=0,y=380)
+
+inputtextkey_tab1 = tk.Entry(tab1, width=24, bd=2)
+inputtextkey_tab1.place(x=0, y=405)
+
+textBox_tab1 = tk.Entry(tab1, width=24, bd=2)
+textBox_tab1.insert(0, "abc123")
+textBox_tab1.place(x=0, y=405)
 
 
 disp_img2 = tk.Label(tab1)
 disp_img2.place(x=775, y=107)
 
-pb1 = ttk.Progressbar(tab1, orient=HORIZONTAL, length=150, mode='determinate')
-pb1.place(x=0,y=205)
+progressbar_tab1 = ttk.Progressbar(tab1, orient=HORIZONTAL, length=150, mode='determinate')
+progressbar_tab1.place(x=0,y=205)
 
-value_label = ttk.Label(tab1, text=update_progress_label())
-value_label.place(x=0,y=235)
+pb_tab1_value_label = ttk.Label(tab1, text=update_progress_label())
+pb_tab1_value_label.place(x=0,y=235)
 
 
 
@@ -804,8 +822,15 @@ baseFrameencoded.place(x=173, y=105)
 
 decode_button.place(x=0, y=55)
 
+pb2_label = ttk.Label(tab2, text="64 Bit Encryption Key:")
+pb2_label.place(x=0,y=380)
 
+inputtextkey = tk.Entry(tab2, width=24, bd=2)
+inputtextkey.place(x=0, y=405)
 
+textBox = tk.Entry(tab2, width=24, bd=2)
+textBox.insert(0, "abc123")
+textBox.place(x=0, y=405)
 
 
 
