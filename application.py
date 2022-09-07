@@ -21,27 +21,25 @@ from tkinter import messagebox
 
 pygame.mixer.init(frequency=44100, size=-16, channels=1)
 
-imgwidth = 0
-imgheight = 0
-wscale = 1
-hscale = 1
+base_img_width = 0
+base_img_height = 0
+base_w_scale = 1
+base_h_scale = 1
 
 
-encodedimgwidth = 0
-encodedimgheight = 0
-encodedwscale = 1
-encodedhscale = 1
+encoded_img_width = 0
+encoded_img_height = 0
+encoded_w_scale = 1
+encoded_h_scale = 1
 
 
-imgfilename = 1
-encodedimgfilename = 1
-audiofilename = 1
+base_img_filename = 1
+encoded_img_filename = 1
+audio_filename = 1
 
 
 root = Tk()
 root.geometry('1500x850')
-#root.attributes('-fullscreen', True)
-#root.resizable(0,0)
 root.title("SteganoPy")
 
 tabControl = ttk.Notebook(root)
@@ -59,73 +57,71 @@ def get_digit(number, n):
     return number // 10**n % 10
 
 def select_image_file():
-    global imgfilename
+    global base_img_filename
     global img
     global img1
-    global imgwidth
-    global imgheight, wscale, hscale
+    global base_img_width
+    global base_img_height, base_w_scale, base_h_scale
     
     filetypes = (
         ("Image files", ("*.jpg", "*.png")),
         ("All files", "*.*")
     )
 
-    imgfilename = fd.askopenfilename(
+    base_img_filename = fd.askopenfilename(
         title = "Open a File",
         initialdir="/",
         filetypes=filetypes
     )
 
-    if imgfilename == "":
+    if base_img_filename == "":
         return
 
-    imgfilename = "".join(imgfilename)
+    base_img_filename = "".join(base_img_filename)
     
 
 
-    img = Image.open(imgfilename)
+    img = Image.open(base_img_filename)
     img1 = ImageTk.PhotoImage(img)
 
-    openimgfilename.config(text=imgfilename.split("/")[-1])
+    open_img_filename.config(text=base_img_filename.split("/")[-1])
 
-    imgwidth = img1.width()
-    imgheight = img1.height()
+    base_img_width = img1.width()
+    base_img_height = img1.height()
 
     
 
-    if imgwidth > imgheight:
-        wscale = 1
-        hscale = imgheight / imgwidth
-    elif imgheight > imgwidth:
-        hscale = 1
-        wscale = imgwidth / imgheight
-    elif imgwidth == imgheight:
-        wscale = 1
-        hscale = 1
+    if base_img_width > base_img_height:
+        base_w_scale = 1
+        base_h_scale = base_img_height / base_img_width
+    elif base_img_height > base_img_width:
+        base_h_scale = 1
+        base_w_scale = base_img_width / base_img_height
+    elif base_img_width == base_img_height:
+        base_w_scale = 1
+        base_h_scale = 1
     
-    print(wscale)
-    print(hscale)
+    print(base_w_scale)
+    print(base_h_scale)
 
-    w = int(500 * wscale)
-    h = int(500 * hscale)
+    w = int(500 * base_w_scale)
+    h = int(500 * base_h_scale)
     resize_img = img.resize((w, h))
     img = ImageTk.PhotoImage(resize_img)
     disp_inputimg.config(image=img)
     disp_inputimg.image = img
 
-    #disp_img2.config(image=img)
-    #disp_img2.image = img
 
-    baseImgdims.config(text = f'witdth: {imgwidth} height: {imgheight}')
-    baseImgdims.place_configure(y=500*hscale+120)
+    baseImgdims.config(text = f'witdth: {base_img_width} height: {base_img_height}')
+    baseImgdims.place_configure(y=500*base_h_scale+120)
     
-    inputimgFrame.config(width=(500*wscale+8), height=(500*hscale+8))
+    inputimgFrame.config(width=(500*base_w_scale+8), height=(500*base_h_scale+8))
     
 
-    if imgfilename == 1 or audiofilename == 1:
+    if base_img_filename == 1 or audio_filename == 1:
         preview.config(state="disabled")
         encode_button.config(state="disabled")
-    elif imgfilename != 1 and audiofilename == 1:
+    elif base_img_filename != 1 and audio_filename == 1:
         decode_button.config(state="normal")
     else:
         preview.config(state="normal")
@@ -133,73 +129,73 @@ def select_image_file():
         decode_button.config(state="normal")
 
     
-    return imgfilename
+    return base_img_filename
 
 def select_encoded_image_file():
-    global encodedimgfilename
+    global encoded_img_filename
     global encodedimg
     global encodedimg1
-    global encodedimgwidth, encodedimgheight, encodedwscale, encodedhscale
+    global encoded_img_width, encoded_img_height, encoded_w_scale, encoded_h_scale
 
     filetypes = (
         ("Image files", ("*.jpg", "*.png")),
         ("All files", "*.*")
     )
 
-    encodedimgfilename = fd.askopenfilename(
+    encoded_img_filename = fd.askopenfilename(
         title = "Open a File",
         initialdir="/",
         filetypes=filetypes
     )
 
-    if encodedimgfilename == "":
+    if encoded_img_filename == "":
         return
 
-    encodedimgfilename = "".join(encodedimgfilename)
+    encoded_img_filename = "".join(encoded_img_filename)
     
 
 
-    encodedimg = Image.open(encodedimgfilename)
+    encodedimg = Image.open(encoded_img_filename)
     encodedimg1 = ImageTk.PhotoImage(encodedimg)
 
-    openencodedimgfilename.config(text=encodedimgfilename.split("/")[-1])
+    openencodedimgfilename.config(text=encoded_img_filename.split("/")[-1])
 
-    encodedimgwidth = encodedimg1.width()
-    encodedimgheight = encodedimg1.height()
+    encoded_img_width = encodedimg1.width()
+    encoded_img_height = encodedimg1.height()
 
     
 
-    if encodedimgwidth > encodedimgheight:
-        encodedwscale = 1
-        encodedhscale = encodedimgheight / encodedimgwidth
-    elif encodedimgheight > encodedimgwidth:
-        encodedhscale = 1
-        encodedwscale = encodedimgwidth / encodedimgheight
-    elif encodedimgwidth == encodedimgheight:
-        encodedwscale = 1
-        encodedhscale = 1
+    if encoded_img_width > encoded_img_height:
+        encoded_w_scale = 1
+        encoded_h_scale = encoded_img_height / encoded_img_width
+    elif encoded_img_height > encoded_img_width:
+        encoded_h_scale = 1
+        encoded_w_scale = encoded_img_width / encoded_img_height
+    elif encoded_img_width == encoded_img_height:
+        encoded_w_scale = 1
+        encoded_h_scale = 1
     
-    print(encodedwscale)
-    print(encodedhscale)
+    print(encoded_w_scale)
+    print(encoded_h_scale)
 
-    encodedw = int(500 * encodedwscale)
-    encodedh = int(500 * encodedhscale)
+    encodedw = int(500 * encoded_w_scale)
+    encodedh = int(500 * encoded_h_scale)
     resize_img = encodedimg.resize((encodedw, encodedh))
     encodedimg = ImageTk.PhotoImage(resize_img)
     disp_encodedimg.config(image=encodedimg)
     disp_encodedimg.image = encodedimg
 
 
-    baseImgdims.config(text = f'witdth: {imgwidth} height: {imgheight}')
-    baseImgdims.place_configure(y=500*hscale+120)
+    baseImgdims.config(text = f'witdth: {base_img_width} height: {base_img_height}')
+    baseImgdims.place_configure(y=500*base_h_scale+120)
     
-    baseFrameencoded.config(width=(500*encodedwscale+8), height=(500*encodedhscale+8))
+    baseFrameencoded.config(width=(500*encoded_w_scale+8), height=(500*encoded_h_scale+8))
 
     
-    return encodedimgfilename
+    return encoded_img_filename
 
 def select_audio_file():
-    global audiofilename
+    global audio_filename
     global audioarray
 
     filetypes = (
@@ -207,18 +203,18 @@ def select_audio_file():
         ("All files", "*.*")
     )
 
-    audiofilename = fd.askopenfilename(
+    audio_filename = fd.askopenfilename(
         title = "Open a File",
         initialdir="/",
         filetypes=filetypes
     )
 
-    if audiofilename == "":
+    if audio_filename == "":
         return
 
-    audiofilename = "".join(audiofilename)
+    audio_filename = "".join(audio_filename)
 
-    if imgfilename == 1 or audiofilename == 1:
+    if base_img_filename == 1 or audio_filename == 1:
         preview.config(state=DISABLED)
         encode_button.config(state=DISABLED)
         decode_button.config(state=DISABLED)
@@ -227,27 +223,29 @@ def select_audio_file():
         encode_button.config(state=NORMAL)
         decode_button.config(state=NORMAL)
 
-    if audiofilename != 1:
-        playaudiobutton.config(state=NORMAL)
-        encryptaudiobutton.config(state=NORMAL)
-        decryptaudiobutton.config(state=NORMAL)
+    if audio_filename != 1:
+        play_audio_button.config(state=NORMAL)
+        encrypt_audio_button.config(state=NORMAL)
+        decrypt_audio_button.config(state=NORMAL)
 
-    openaudiofilename.config(text=audiofilename.split("/")[-1])
-    openaudiofilename2.config(text=audiofilename.split("/")[-1])
+    open_audio_filename.config(text=audio_filename.split("/")[-1])
+    open_audio_filename_tab3.config(text=audio_filename.split("/")[-1])
 
-    audioclip = pydub.AudioSegment.from_mp3(audiofilename)
+    audioclip = pydub.AudioSegment.from_mp3(audio_filename)
     audioarray = np.array(audioclip.get_array_of_samples())
-    #audioarray = audioarray + (2**16)/2
-    #audioarray = np.rint((audioarray / 2**16) * 999)
+    
+    
+
+    open_audio_length.config(text=f"{math.floor(len(audioarray)/(48000*60))}m:{(len(audioarray) % (48000*60))/48000}s")
 
     plotaudio()
 
-    return audiofilename
+    return audio_filename
 
-def previewEncode():
+def preview_encoded_image():
     preview.config(state=DISABLED)
 
-    im = Image.open(imgfilename)
+    im = Image.open(base_img_filename)
           
     a = np.array(im)
     a[0][0][0] = 0
@@ -297,25 +295,25 @@ def previewEncode():
 
     
 
-    imgPreviewout = Image.fromarray(a)
-    imgPreview = ImageTk.PhotoImage(imgPreviewout)
+    img_preview_out = Image.fromarray(a)
+    img_preview = ImageTk.PhotoImage(img_preview_out)
 
-    imgwidth = imgPreview.width()
-    imgheight = imgPreview.height()
+    imgwidth = img_preview.width()
+    imgheight = img_preview.height()
 
 
     if imgwidth >= 500 and imgheight >= 500:
-        imgPreviewout = imgPreviewout.crop((0,0,499,499))
+        img_preview_out = img_preview_out.crop((0,0,499,499))
     elif imgwidth < 500 and imgheight >= 500:
-        imgPreviewout = imgPreviewout.crop((0,0,imgwidth-1,499))
+        img_preview_out = img_preview_out.crop((0,0,imgwidth-1,499))
     elif imgwidth >= 500 and imgheight < 500:
-        imgPreviewout = imgPreviewout.crop((0,0,499,imgheight-1))
+        img_preview_out = img_preview_out.crop((0,0,499,imgheight-1))
     if imgwidth < 500 and imgheight < 500:
-        imgPreviewout = imgPreviewout.crop((0,0,imgwidth-1,imgheight-1))
+        img_preview_out = img_preview_out.crop((0,0,imgwidth-1,imgheight-1))
         
 
     
-    imgPreviewout = ImageTk.PhotoImage(imgPreviewout)
+    img_preview_out = ImageTk.PhotoImage(img_preview_out)
 
     if imgwidth < 500:
         outputFrame.config(width=(imgwidth+8))
@@ -326,25 +324,21 @@ def previewEncode():
     else:
         outputFrame.config(height=508)
 
-    disp_img2.config(image=imgPreviewout)
-    disp_img2.image = imgPreviewout
+    disp_img2.config(image=img_preview_out)
+    disp_img2.image = img_preview_out
 
     if imgheight > 500:
         imgheight = 500
 
-    previewimglabel.place_configure(y=imgheight+120)
+    preview_img_label.place_configure(y=imgheight+120)
     preview.config(state="normal")   
 
 def encoding():
-    
     #root.update_idletasks()
-    
-
     f = fd.asksaveasfile(mode='w', defaultextension=".png")
 
-    im = Image.open(imgfilename)
-    
-        
+    im = Image.open(base_img_filename)
+     
     a = np.array(im)
 
 
@@ -400,10 +394,10 @@ def encoding():
     im2.save(str(f.name), format="png")
 
 def decoding():
-    global imgfilename
-    imgdecode = Image.open(imgfilename)
+    global base_img_filename
+    img_decode = Image.open(base_img_filename)
     
-    a = np.asarray(imgdecode)
+    a = np.asarray(img_decode)
 
     audioarray = np.zeros(len(a)*len(a[0]))
 
@@ -435,7 +429,7 @@ def update_pb2_label():
 def encrypt_audio():
     #start = perf_counter()
     global audioarray
-    global audioarrayoutput
+    global audio_array_output
 
     pb2["value"] = 0
     pb2_label['text'] = "                                            "
@@ -444,10 +438,10 @@ def encrypt_audio():
     #print("key:")
     #print(int(textBox.get(),16))
     
-    audioarrayoutput = np.zeros(len(audioarray))
+    audio_array_output = np.zeros(len(audioarray))
     
 
-    percentofaudio = round(len(audioarrayoutput) * .001) 
+    percentofaudio = round(len(audio_array_output) * .001) 
 
     key = int(textBox.get(),16)
 
@@ -470,7 +464,7 @@ def encrypt_audio():
         return
 
     for x in range(len(audioarray)):
-        audioarrayoutput[x] = encryptionmodule.encrypt(intkey, int(audioarray[x]), x)
+        audio_array_output[x] = encryptionmodule.encrypt(intkey, int(audioarray[x]), x)
 
         
         
@@ -490,19 +484,19 @@ def encrypt_audio():
     #duration = perf_counter() - start
     #print('{} took {:.3f} seconds\n\n'.format("c++", duration))
 
-    if "audioarrayoutput" in globals():
+    if "audio_array_output" in globals():
         playoutputaudiobutton.config(state=NORMAL)
         Exportoutputaudiobutton.config(state=NORMAL)
     
         
 
     plotoutputaudio()
-    return audioarrayoutput
+    return audio_array_output
 
 def decrypt_audio():
     #start = perf_counter()
     global audioarray
-    global audioarrayoutput
+    global audio_array_output
 
     pb2["value"] = 0
     pb2_label['text'] = "                                            "
@@ -511,10 +505,10 @@ def decrypt_audio():
     #print("key:")
     #print(int(textBox.get(),16))
     
-    audioarrayoutput = np.zeros(len(audioarray))
+    audio_array_output = np.zeros(len(audioarray))
     
 
-    percentofaudio = round(len(audioarrayoutput) * .001) 
+    percentofaudio = round(len(audio_array_output) * .001) 
 
     key = int(textBox.get(),16)
 
@@ -536,7 +530,7 @@ def decrypt_audio():
     
 
     for x in range(len(audioarray)):
-        audioarrayoutput[x] = encryptionmodule.decrypt(intkey, int(audioarray[x]), x)
+        audio_array_output[x] = encryptionmodule.decrypt(intkey, int(audioarray[x]), x)
 
         
         
@@ -560,27 +554,24 @@ def decrypt_audio():
         Exportoutputaudiobutton.config(state=NORMAL)
 
     plotoutputaudio()
-    return audioarrayoutput
+    return audio_array_output
 
 def playaudio():
-    audioarray2 = np.repeat(audioarray.reshape(len(audioarray), 1), 2, axis = 1)
-    audioarray2 = audioarray2.astype("int16")
-    audiotoplay = pygame.sndarray.make_sound(audioarray2)
+    audioarray_2channels = np.repeat(audioarray.reshape(len(audioarray), 1), 2, axis = 1)
+    audioarray_2channels = audioarray_2channels.astype("int16")
+    audiotoplay = pygame.sndarray.make_sound(audioarray_2channels)
     audiotoplay.play(loops=0)
 
 def playoutputaudio():
-    audioarray2 = np.repeat(audioarrayoutput.reshape(len(audioarrayoutput), 1), 2, axis = 1)
-    audioarray2 = audioarray2.astype("int16")
-    audiotoplay = pygame.sndarray.make_sound(audioarray2)
+    audioarray_2channels = np.repeat(audio_array_output.reshape(len(audio_array_output), 1), 2, axis = 1)
+    audioarray_2channels = audioarray_2channels.astype("int16")
+    audiotoplay = pygame.sndarray.make_sound(audioarray_2channels)
     audiotoplay.play(loops=0)
 
 def stopaudio():
     pygame.mixer.stop()
 
 def plotaudio():
-
-    
-  
     # the figure that will contain the plot
     fig = Figure(figsize = (12, 3), dpi = 100)
 
@@ -610,7 +601,7 @@ def plotaudio():
     toolbar.place(x=173, y = 355)
 
 def plotoutputaudio():
-    global audioarrayoutput
+    global audio_array_output
     
   
     # the figure that will contain the plot
@@ -629,7 +620,7 @@ def plotoutputaudio():
     # plotting the graph
     plot2 = fig2.add_subplot(111)
   
-    audioplt = plot2.plot(Time, audioarrayoutput)
+    audioplt = plot2.plot(Time, audio_array_output)
   
     # creating the Tkinter canvas
     # containing the Matplotlib figure
@@ -647,9 +638,18 @@ def plotoutputaudio():
     toolbar.place(x=173, y = 705)
 
 def Exportaudio():
-    y = np.int16(audioarrayoutput)
+    export_audio_filename = fd.asksaveasfile(mode='w', defaultextension=".wav")
+    y = np.int16(audio_array_output)
     song = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
-    song.export("Exported Audio.wav", format="wav", bitrate="48k") 
+    song.export(str(export_audio_filename.name), format="wav", bitrate="48k") 
+    print(str(export_audio_filename.name))
+
+
+
+
+
+
+
 
 
 # Tab 1 ##############################################################
@@ -676,7 +676,7 @@ preview = tk.Button(
     text='Preview',
     height = 2, 
     width=20,
-    command=previewEncode
+    command=preview_encoded_image
 )
 preview.place(x=0, y=105)
 
@@ -691,32 +691,32 @@ encode_button.place(x=0, y=155)
 
 baseImgdims = tk.Label(
     tab1,
-    text=f'width: {imgwidth} height: {imgheight}', 
+    text=f'width: {base_img_width} height: {base_img_height}', 
     bd=2, 
     relief=SUNKEN
 )
 baseImgdims.place(x=173, y=620)
 
-openimgfilename = tk.Label(
+open_img_filename = tk.Label(
     tab1,
     text="None Selected", 
     bd=2, 
     relief=SUNKEN
 )  
-openimgfilename.place(x=173, y=15)
+open_img_filename.place(x=173, y=15)
 
-openaudiofilename = tk.Label(
+open_audio_filename = tk.Label(
     tab1,
     text="None Selected", 
     bd=2, 
     relief=SUNKEN
 )  
-openaudiofilename.place(x=173, y=65)
+open_audio_filename.place(x=173, y=65)
 
 inputimgFrame = tk.Frame(
     tab1,
-    width=(500*wscale+8), 
-    height=(500*hscale+8), 
+    width=(500*base_w_scale+8), 
+    height=(500*base_h_scale+8), 
     bd=2, 
     relief=SUNKEN
 )
@@ -734,13 +734,13 @@ outputFrame = tk.Frame(
 )
 outputFrame.place(x=773, y=105)
 
-previewimglabel = tk.Label(
+preview_img_label = tk.Label(
     tab1,
     text="1:1 scale", 
     bd=2, 
     relief=SUNKEN
 )  
-previewimglabel.place(x=773, y=620)
+preview_img_label.place(x=773, y=620)
 
 
 
@@ -785,11 +785,10 @@ openencodedimgfilename = tk.Label(
 openencodedimgfilename.place(x=173, y=15)
 
 
-
 baseFrameencoded = tk.Frame(
     tab2, 
-    width=(500*wscale+8), 
-    height=(500*hscale+8), 
+    width=(500*base_w_scale+8), 
+    height=(500*base_h_scale+8), 
     bd=2, 
     relief=SUNKEN
 )
@@ -823,22 +822,30 @@ open_audio_button2 = tk.Button(
 )
 open_audio_button2.place(x=0, y=5)
 
-openaudiofilename2 = tk.Label(
+open_audio_filename_tab3 = tk.Label(
     tab3,
     text="None Selected", 
     bd=2, 
     relief=SUNKEN
 )  
-openaudiofilename2.place(x=173, y=15)
+open_audio_filename_tab3.place(x=173, y=5)
 
-playaudiobutton = tk.Button(
+open_audio_length = tk.Label(
+    tab3,
+    text="00m:00.00s", 
+    bd=2, 
+    relief=SUNKEN
+)  
+open_audio_length.place(x=173, y=25)
+
+play_audio_button = tk.Button(
     tab3,
     text='Play audio',
     height = 2, 
     width=20,
     command=playaudio
 )
-playaudiobutton.place(x=0, y=55)
+play_audio_button.place(x=0, y=55)
 
 playoutputaudiobutton = tk.Button(
     tab3,
@@ -858,25 +865,23 @@ stopaudiobutton = tk.Button(
 )
 stopaudiobutton.place(x=0, y=155)
 
-encryptaudiobutton = tk.Button(
+encrypt_audio_button = tk.Button(
     tab3,
     text='Encrypt audio',
     height = 2, 
     width=20,
     command=encrypt_audio
 )
-encryptaudiobutton.place(x=0, y=225)
+encrypt_audio_button.place(x=0, y=225)
 
-decryptaudiobutton = tk.Button(
+decrypt_audio_button = tk.Button(
     tab3,
     text='Decrypt audio',
     height = 2, 
     width=20,
     command=decrypt_audio
 )
-decryptaudiobutton.place(x=0, y=275)
-
-
+decrypt_audio_button.place(x=0, y=275)
 
 Exportoutputaudiobutton = tk.Button(
     tab3,
@@ -903,31 +908,16 @@ pb2.place(x=0,y=435)
 pb2_label = ttk.Label(tab3, text=update_pb2_label())
 pb2_label.place(x=0,y=465)
 
-#audiowaveformFrame = tk.Frame(
-#    tab3,
-#    width=(1000), 
-#    height=(250), 
-#    bd=2, 
-#    relief=SUNKEN
-#)
 
-#audiowaveformFrame.place(x=173, y=55)
-
-#LOD_slider.place(x=173, y=105)
-
-
-
-#open_button.pack(expand=True)
-
-if imgfilename == 1 or audiofilename == 1:
+if base_img_filename == 1 or audio_filename == 1:
     preview.config(state=DISABLED)
     encode_button.config(state=DISABLED)
     decode_button.config(state=DISABLED)
 
-if audiofilename == 1:
-    playaudiobutton.config(state=DISABLED)
-    encryptaudiobutton.config(state=DISABLED)
-    decryptaudiobutton.config(state=DISABLED)
+if audio_filename == 1:
+    play_audio_button.config(state=DISABLED)
+    encrypt_audio_button.config(state=DISABLED)
+    decrypt_audio_button.config(state=DISABLED)
     
 
 if "audioarrayoutput" in globals():
