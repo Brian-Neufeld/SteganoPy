@@ -342,6 +342,22 @@ def encoding():
      
     a = np.array(im)
 
+    # popup progress bar code ######
+    global general_progress_bar1, progressbar_popup, general_pb_label
+
+    progressbar_popup = tk.Toplevel(height=100, width=400)
+    progressbar_label = tk.Label(progressbar_popup, text="Audio is being encrypted")
+    progressbar_label.place(x=150, y=25)
+    
+    general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient=HORIZONTAL, length=350, mode='determinate')
+    general_progress_bar1.place(x=25, y=50)
+
+    general_pb_label = ttk.Label(progressbar_popup, text="0%")
+    general_pb_label.place(x=150,y=75)
+
+    progressbar_popup.update_idletasks()
+    
+    ###############################
 
     #audioclip = pydub.AudioSegment.from_mp3(audiofilename)
     #audioarray = np.array(audioclip.get_array_of_samples())
@@ -349,16 +365,13 @@ def encoding():
     #audioarray = np.rint((audioarray / 2**16) * 999)
 
     
-
-    progressbar_tab1["value"] = 0
-    pb_tab1_value_label['text'] = "                                            "
-    root.update_idletasks()
     
     if encrypt_check.get() == 1:
         encrypt_audio()
         audioarray_to_encode = audio_array_output
     elif encrypt_check.get() == 0:
         audioarray_to_encode = audioarray
+
 
     for x in range(len(a)):
         #print(x)
@@ -384,9 +397,8 @@ def encoding():
 
                 
                 #print(str(digit) + "  " + str(audioarray[x*len(a[x])+y]))
-        progressbar_tab1["value"] += 1/len(a)*100
-        pb_tab1_value_label['text'] = update_progress_label()
-        root.update_idletasks()
+        general_progress_bar(x, len(a))
+        progressbar_popup.update_idletasks()
         
     
                 
@@ -427,22 +439,47 @@ def decoding():
     song.export("decoded audio.mp3", format="mp3", bitrate="48k")
 
 def update_progress_label():
-    return f"Current Progress: {round(progressbar_tab1['value'],2)}%"
+    return f"Current Progress: {round(progressbar_tab1['value'],1)}%"
 
 def update_pb2_label():
     return f"Current Progress: {round(pb2['value'],2)}%"
+
+
+
+
+def general_progress_bar(increment, total):
+    general_progress_bar1["value"] = increment/total * 100
+    general_pb_label["text"] = update_general_pb()
+    progressbar_popup.update_idletasks()
+
+def update_general_pb():
+    return f"Current Progress: {round(general_progress_bar1['value'],1)}%"
+
 
 def encrypt_audio():
     #start = perf_counter()
     global audioarray
     global audio_array_output
 
-    pb2["value"] = 0
-    pb2_label['text'] = "                                            "
-    root.update_idletasks()
 
-    #print("key:")
-    #print(int(textBox.get(),16))
+    # popup progress bar code ######
+    global general_progress_bar1, progressbar_popup, general_pb_label
+
+    progressbar_popup = tk.Toplevel(height=100, width=400)
+    progressbar_label = tk.Label(progressbar_popup, text="Audio is being encrypted")
+    progressbar_label.place(x=150, y=25)
+    
+    general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient=HORIZONTAL, length=350, mode='determinate')
+    general_progress_bar1.place(x=25, y=50)
+
+    general_pb_label = ttk.Label(progressbar_popup, text="0%")
+    general_pb_label.place(x=150,y=75)
+
+    progressbar_popup.update_idletasks()
+    
+    ###############################
+    
+
     
     audio_array_output = np.zeros(len(audioarray))
     
@@ -476,12 +513,16 @@ def encrypt_audio():
         
         if x > 0:
             if x % percentofaudio == 0: 
-                
-                pb2["value"] += 0.1
-                pb2_label['text'] = update_pb2_label()
+                general_progress_bar(x, len(audioarray))
+                progressbar_popup.update_idletasks()
+
+                #pb2["value"] += 0.1
+                #pb2_label['text'] = update_pb2_label()
                 root.update_idletasks()
 
     print(audioarray)
+
+    
 
     pb2["value"] = 100
     pb2_label['text'] = update_pb2_label()
@@ -495,7 +536,7 @@ def encrypt_audio():
         Exportoutputaudiobutton.config(state=NORMAL)
     
         
-
+    progressbar_popup.destroy()
     plotoutputaudio()
     return audio_array_output
 
@@ -653,7 +694,7 @@ def Exportaudio():
 
 
 
-
+# Progress bar window ###############################################
 
 
 
