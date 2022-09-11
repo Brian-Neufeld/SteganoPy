@@ -1,6 +1,6 @@
+from turtle import bgcolor
 import numpy as np
 import PIL
-from tkinter import *
 from PIL import ImageTk,Image 
 import tkinter as tk
 from tkinter import filedialog as fd
@@ -21,7 +21,7 @@ from tkinter import messagebox
 
 pygame.mixer.init(frequency=44100, size=-16, channels=1)
 
-root = Tk()
+root = tk.Tk()
 root.geometry('1500x850')
 root.title("SteganoPy")
 
@@ -41,7 +41,7 @@ base_img_filename = 1
 encoded_img_filename = 1
 audio_filename = 1
 
-encrypt_check = IntVar()
+encrypt_check = tk.IntVar()
 
 tabControl = ttk.Notebook(root)
   
@@ -56,6 +56,14 @@ tabControl.pack(expand = 1, fill ="both")
 
 def get_digit(number, n):
     return number // 10**n % 10
+
+def general_progress_bar(increment, total):
+    general_progress_bar1["value"] = increment/total * 100
+    general_pb_label["text"] = update_general_pb()
+    progressbar_popup.update_idletasks()
+
+def update_general_pb():
+    return f"Current Progress: {round(general_progress_bar1['value'],1)}%"
 
 def select_image_file():
     global base_img_filename
@@ -216,18 +224,18 @@ def select_audio_file():
     audio_filename = "".join(audio_filename)
 
     if base_img_filename == 1 or audio_filename == 1:
-        preview.config(state=DISABLED)
-        encode_button.config(state=DISABLED)
-        decode_button.config(state=DISABLED)
+        preview.config(state="disabled")
+        encode_button.config(state="disabled")
+        decode_button.config(state="disabled")
     else:
-        preview.config(state=NORMAL)
-        encode_button.config(state=NORMAL)
-        decode_button.config(state=NORMAL)
+        preview.config(state="normal")
+        encode_button.config(state="normal")
+        decode_button.config(state="normal")
 
     if audio_filename != 1:
-        play_audio_button.config(state=NORMAL)
-        encrypt_audio_button.config(state=NORMAL)
-        decrypt_audio_button.config(state=NORMAL)
+        play_audio_button.config(state="normal")
+        encrypt_audio_button.config(state="normal")
+        decrypt_audio_button.config(state="normal")
 
     open_audio_filename.config(text=audio_filename.split("/")[-1])
     open_audio_filename_tab3.config(text=audio_filename.split("/")[-1])
@@ -244,7 +252,7 @@ def select_audio_file():
     return audio_filename
 
 def preview_encoded_image():
-    preview.config(state=DISABLED)
+    preview.config(state="disabled")
 
     im = Image.open(base_img_filename)
           
@@ -343,13 +351,13 @@ def encoding():
     a = np.array(im)
 
     # popup progress bar code ######
-    global general_progress_bar1, progressbar_popup, general_pb_label
+    global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
 
     progressbar_popup = tk.Toplevel(height=100, width=400)
-    progressbar_label = tk.Label(progressbar_popup, text="Audio is being encrypted")
+    progressbar_label = tk.Label(progressbar_popup, text="Audio is being encoded")
     progressbar_label.place(x=150, y=25)
     
-    general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient=HORIZONTAL, length=350, mode='determinate')
+    general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient="horizontal", length=350, mode='determinate')
     general_progress_bar1.place(x=25, y=50)
 
     general_pb_label = ttk.Label(progressbar_popup, text="0%")
@@ -364,11 +372,13 @@ def encoding():
     #audioarray = audioarray + (2**16)/2
     #audioarray = np.rint((audioarray / 2**16) * 999)
 
-    
+     
     
     if encrypt_check.get() == 1:
         encrypt_audio()
         audioarray_to_encode = audio_array_output
+        progressbar_label.config(text="Audio is being encoded")
+        progressbar_popup.update_idletasks()
     elif encrypt_check.get() == 0:
         audioarray_to_encode = audioarray
 
@@ -397,6 +407,7 @@ def encoding():
 
                 
                 #print(str(digit) + "  " + str(audioarray[x*len(a[x])+y]))
+        
         general_progress_bar(x, len(a))
         progressbar_popup.update_idletasks()
         
@@ -446,16 +457,6 @@ def update_pb2_label():
 
 
 
-
-def general_progress_bar(increment, total):
-    general_progress_bar1["value"] = increment/total * 100
-    general_pb_label["text"] = update_general_pb()
-    progressbar_popup.update_idletasks()
-
-def update_general_pb():
-    return f"Current Progress: {round(general_progress_bar1['value'],1)}%"
-
-
 def encrypt_audio():
     #start = perf_counter()
     global audioarray
@@ -463,13 +464,18 @@ def encrypt_audio():
 
 
     # popup progress bar code ######
-    global general_progress_bar1, progressbar_popup, general_pb_label
+    global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
 
-    progressbar_popup = tk.Toplevel(height=100, width=400)
+    if "progressbar_popup" in globals():
+        pass
+    else:
+        progressbar_popup = tk.Toplevel(height=100, width=400)
+
+
     progressbar_label = tk.Label(progressbar_popup, text="Audio is being encrypted")
     progressbar_label.place(x=150, y=25)
     
-    general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient=HORIZONTAL, length=350, mode='determinate')
+    general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient="horizontal", length=350, mode='determinate')
     general_progress_bar1.place(x=25, y=50)
 
     general_pb_label = ttk.Label(progressbar_popup, text="0%")
@@ -516,27 +522,23 @@ def encrypt_audio():
                 general_progress_bar(x, len(audioarray))
                 progressbar_popup.update_idletasks()
 
-                #pb2["value"] += 0.1
-                #pb2_label['text'] = update_pb2_label()
-                root.update_idletasks()
+        
+    general_progress_bar(1, 1)
+    progressbar_popup.update_idletasks()
+
 
     print(audioarray)
 
     
-
-    pb2["value"] = 100
-    pb2_label['text'] = update_pb2_label()
-    root.update_idletasks()
-
     #duration = perf_counter() - start
     #print('{} took {:.3f} seconds\n\n'.format("c++", duration))
 
     if "audio_array_output" in globals():
-        playoutputaudiobutton.config(state=NORMAL)
-        Exportoutputaudiobutton.config(state=NORMAL)
+        playoutputaudiobutton.config(state="normal")
+        Exportoutputaudiobutton.config(state="normal")
     
         
-    progressbar_popup.destroy()
+    #progressbar_popup.destroy()
     plotoutputaudio()
     return audio_array_output
 
@@ -597,8 +599,8 @@ def decrypt_audio():
     #print('{} took {:.3f} seconds\n\n'.format("c++", duration))
 
     if "audioarrayoutput" in globals():
-        playoutputaudiobutton.config(state=NORMAL)
-        Exportoutputaudiobutton.config(state=NORMAL)
+        playoutputaudiobutton.config(state="normal")
+        Exportoutputaudiobutton.config(state="normal")
 
     plotoutputaudio()
     return audio_array_output
@@ -740,7 +742,7 @@ baseImgdims = tk.Label(
     tab1,
     text=f'width: {base_img_width} height: {base_img_height}', 
     bd=2, 
-    relief=SUNKEN
+    relief="sunken"
 )
 baseImgdims.place(x=173, y=620)
 
@@ -748,7 +750,7 @@ open_img_filename = tk.Label(
     tab1,
     text="None Selected", 
     bd=2, 
-    relief=SUNKEN
+    relief="sunken"
 )  
 open_img_filename.place(x=173, y=15)
 
@@ -756,7 +758,7 @@ open_audio_filename = tk.Label(
     tab1,
     text="None Selected", 
     bd=2, 
-    relief=SUNKEN
+    relief="sunken"
 )  
 open_audio_filename.place(x=173, y=65)
 
@@ -765,7 +767,7 @@ inputimgFrame = tk.Frame(
     width=(500*base_w_scale+8), 
     height=(500*base_h_scale+8), 
     bd=2, 
-    relief=SUNKEN
+    relief="sunken"
 )
 inputimgFrame.place(x=173, y=105)
 
@@ -777,7 +779,7 @@ outputFrame = tk.Frame(
     width=(508), 
     height=(508), 
     bd=2, 
-    relief=SUNKEN
+    relief="sunken"
 )
 outputFrame.place(x=773, y=105)
 
@@ -785,11 +787,11 @@ preview_img_label = tk.Label(
     tab1,
     text="1:1 scale", 
     bd=2, 
-    relief=SUNKEN
+    relief="sunken"
 )  
 preview_img_label.place(x=773, y=620)
 
-checkbox_excrypt = Checkbutton(tab1, text = "Ecrypt Audio with Key", variable=encrypt_check)
+checkbox_excrypt = tk.Checkbutton(tab1, text = "Encrypt Audio with Key", variable=encrypt_check)
 checkbox_excrypt.place(x=0, y=350)
 
 
@@ -808,7 +810,7 @@ textBox_tab1.place(x=0, y=405)
 disp_img2 = tk.Label(tab1)
 disp_img2.place(x=775, y=107)
 
-progressbar_tab1 = ttk.Progressbar(tab1, orient=HORIZONTAL, length=150, mode='determinate')
+progressbar_tab1 = ttk.Progressbar(tab1, orient="horizontal", length=150, mode='determinate')
 progressbar_tab1.place(x=0,y=205)
 
 pb_tab1_value_label = ttk.Label(tab1, text=update_progress_label())
@@ -839,7 +841,7 @@ openencodedimgfilename = tk.Label(
     tab2,
     text="None Selected", 
     bd=2, 
-    relief=SUNKEN
+    relief="sunken"
 )  
 openencodedimgfilename.place(x=173, y=15)
 
@@ -849,7 +851,7 @@ baseFrameencoded = tk.Frame(
     width=(500*base_w_scale+8), 
     height=(500*base_h_scale+8), 
     bd=2, 
-    relief=SUNKEN
+    relief="sunken"
 )
 
 disp_encodedimg = tk.Label(tab2)
@@ -892,7 +894,7 @@ open_audio_filename_tab3 = tk.Label(
     tab3,
     text="None Selected", 
     bd=2, 
-    relief=SUNKEN
+    relief="sunken"
 )  
 open_audio_filename_tab3.place(x=173, y=5)
 
@@ -900,7 +902,7 @@ open_audio_length = tk.Label(
     tab3,
     text="00m:00.00s", 
     bd=2, 
-    relief=SUNKEN
+    relief="sunken"
 )  
 open_audio_length.place(x=173, y=25)
 
@@ -968,7 +970,7 @@ textBox = tk.Entry(tab3, width=24, bd=2)
 textBox.insert(0, "abc123")
 textBox.place(x=0, y=405)
 
-pb2 = ttk.Progressbar(tab3, orient=HORIZONTAL, length=150, mode='determinate')
+pb2 = ttk.Progressbar(tab3, orient="horizontal", length=150, mode='determinate')
 pb2.place(x=0,y=435)
 
 pb2_label = ttk.Label(tab3, text=update_pb2_label())
@@ -976,21 +978,21 @@ pb2_label.place(x=0,y=465)
 
 
 if base_img_filename == 1 or audio_filename == 1:
-    preview.config(state=DISABLED)
-    encode_button.config(state=DISABLED)
-    decode_button.config(state=DISABLED)
+    preview.config(state="disabled")
+    encode_button.config(state="disabled")
+    decode_button.config(state="disabled")
 
 if audio_filename == 1:
-    play_audio_button.config(state=DISABLED)
-    encrypt_audio_button.config(state=DISABLED)
-    decrypt_audio_button.config(state=DISABLED)
+    play_audio_button.config(state="disabled")
+    encrypt_audio_button.config(state="disabled")
+    decrypt_audio_button.config(state="disabled")
     
 
 if "audioarrayoutput" in globals():
     pass
 else:
-    playoutputaudiobutton.config(state=DISABLED)
-    Exportoutputaudiobutton.config(state=DISABLED)
+    playoutputaudiobutton.config(state="disabled")
+    Exportoutputaudiobutton.config(state="disabled")
 
 # run the application
 root.mainloop()
