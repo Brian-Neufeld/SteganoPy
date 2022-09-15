@@ -37,9 +37,12 @@ encoded_w_scale = 1
 encoded_h_scale = 1
 
 
+
 base_img_filename = 1
 encoded_img_filename = 1
 audio_filename = 1
+
+audioarray = 1
 
 encrypt_check = tk.IntVar()
 
@@ -59,14 +62,15 @@ def get_digit(number, n):
 
 
 class tab1_class:
+    global audioarray
+    global base_img_filename, audio_filename
 
     def __init__(self, master):
 
-        global base_img_filename
-        global audio_filename
-        global audioarray
+        
 
-        global open_audio_file_btn, open_audio_file_btn, preview_btn, encode_btn
+        global open_audio_file_btn, open_audio_file_btn, open_img_filename, open_audio_filename, open_audio_length, preview_btn, encode_btn
+        global baseImgdims, disp_inputimg, inputimgFrame, outputFrame, disp_img2, preview_img_label
 
         open_img_file_btn = tk.Button(tab1, text="Open image file", height = 2, width = 20, command=self.open_img_file_fcn)
         open_img_file_btn.place(x=0, y=0)
@@ -74,17 +78,69 @@ class tab1_class:
         open_audio_file_btn = tk.Button(tab1, text='Open audio file', height = 2, width = 20, command=self.open_audio_file_fcn)
         open_audio_file_btn.place(x=0, y=55)
 
+        open_img_filename = tk.Label(tab1,text="None Selected", bd=2, relief="sunken")  
+        open_img_filename.place(x=173, y=15)
+
+        open_audio_filename = tk.Label(tab1, text="None Selected", bd=2,  relief="sunken")  
+        open_audio_filename.place(x=173, y=55)
+
+        open_audio_length = tk.Label(tab1, text="00m:00.00s", bd=2, relief="sunken")  
+        open_audio_length.place(x=173, y=75)
+
         preview_btn = tk.Button(tab1, text='Preview', height = 2, width = 20, command=self.preview_fcn)
         preview_btn.place(x=0, y=105)
 
         encode_btn = tk.Button(tab1, text='Encode', height = 2, width = 20, command=self.encode_fcn)
         encode_btn.place(x=0, y=155)
 
+        baseImgdims = tk.Label(tab1,text=f'width: {base_img_width} height: {base_img_height}', bd=2, relief="sunken")
+        baseImgdims.place(x=173, y=620)
 
+        inputimgFrame = tk.Frame(
+            tab1,
+            width=(500*base_w_scale+8), 
+            height=(500*base_h_scale+8), 
+            bd=2, 
+            relief="sunken"
+        )
+        inputimgFrame.place(x=173, y=105)
+
+        disp_inputimg = tk.Label(tab1)
+        disp_inputimg.place(x=175, y=107)
+
+        outputFrame = tk.Frame(
+            tab1, 
+            width=(508), 
+            height=(508), 
+            bd=2, 
+            relief="sunken"
+        )
+        outputFrame.place(x=773, y=105)
+
+        preview_img_label = tk.Label(tab1, text="1:1 scale", bd=2, relief="sunken")  
+        preview_img_label.place(x=773, y=620)
+
+        checkbox_excrypt = tk.Checkbutton(tab1, text = "Encrypt Audio with Key", variable=encrypt_check)
+        checkbox_excrypt.place(x=0, y=350)
+
+        pb2_label = ttk.Label(tab1, text="64 Bit Encryption Key:")
+        pb2_label.place(x=0,y=380)
+
+        inputtextkey_tab1 = tk.Entry(tab1, width=24, bd=2)
+        inputtextkey_tab1.place(x=0, y=405)
+
+        textBox_tab1 = tk.Entry(tab1, width=24, bd=2)
+        textBox_tab1.insert(0, "abc123")
+        textBox_tab1.place(x=0, y=405)
+
+
+        disp_img2 = tk.Label(tab1)
+        disp_img2.place(x=775, y=107)
+
+         
 
     def open_img_file_fcn(self):
-        print("image file opened")
-
+        
         filetypes = (
         ("Image files", ("*.jpg", "*.png")),
         ("All files", "*.*")
@@ -138,17 +194,7 @@ class tab1_class:
         inputimgFrame.config(width=(500*base_w_scale+8), height=(500*base_h_scale+8))
         
 
-        if base_img_filename == 1 or audio_filename == 1:
-            preview_btn.config(state="disabled")
-            encode_btn.config(state="disabled")
-        elif base_img_filename != 1 and audio_filename == 1:
-            decode_button.config(state="normal")
-        else:
-            preview_btn.config(state="normal")
-            encode_btn.config(state="normal")
-            #decode_btn.config(state="normal")
-
-        
+        print(base_img_filename)
         return base_img_filename
 
     def open_audio_file_fcn(self):
@@ -168,19 +214,7 @@ class tab1_class:
 
         audio_filename = "".join(audio_filename)
 
-        if base_img_filename == 1 or audio_filename == 1:
-            preview.config(state="disabled")
-            encode_button.config(state="disabled")
-            decode_button.config(state="disabled")
-        else:
-            preview.config(state="normal")
-            encode_button.config(state="normal")
-            decode_button.config(state="normal")
-
-        if audio_filename != 1:
-            play_audio_button.config(state="normal")
-            encrypt_audio_button.config(state="normal")
-            decrypt_audio_button.config(state="normal")
+            
 
         open_audio_filename.config(text=audio_filename.split("/")[-1])
         open_audio_filename_tab3.config(text=audio_filename.split("/")[-1])
@@ -192,22 +226,28 @@ class tab1_class:
 
         open_audio_length.config(text=f"{math.floor(len(audioarray)/(48000*60))}m:{(len(audioarray) % (48000*60))/48000}s")
 
-        plotaudio()
+        #plotaudio()
 
         return audio_filename
 
     def preview_fcn(self):
-        preview.config(state="disabled")
+        print(base_img_filename)
+
+        if base_img_filename == 1:
+            messagebox.showerror('Program Error', 'Error: No image file seleted')
+            pass
+        elif audio_filename == 1:
+            messagebox.showerror('Program Error', 'Error: No audio file seleted')
+            pass
+
+
+        #preview_btn.config(state="disabled")
 
         im = Image.open(base_img_filename)
             
         a = np.array(im)
         a[0][0][0] = 0
 
-        #audioclip = pydub.AudioSegment.from_mp3(audiofilename)
-        #audioarray = np.array(audioclip.get_array_of_samples())
-        #audioarray = audioarray + (2**16)/2
-        #audioarray = np.rint((audioarray / 2**16) * 999)
 
         progressbar_tab1["value"] = 0
         pb_tab1_value_label['text'] = "                                            "
@@ -285,7 +325,7 @@ class tab1_class:
             imgheight = 500
 
         preview_img_label.place_configure(y=imgheight+120)
-        preview.config(state="normal")   
+        preview_btn.config(state="normal")   
 
     def encode_fcn(self):
         f = fd.asksaveasfile(mode='w', defaultextension=".png")
@@ -1018,115 +1058,6 @@ def Exportaudio():
 
 
 
-# Tab 1 ##############################################################
-""" open_img_button = tk.Button(
-    tab1,
-    text='Open an image file',
-    height = 2, 
-    width=20,
-    command=select_image_file
-)
-open_img_button.place(x=0, y=5) """
-
-""" open_audio_button = tk.Button(
-    tab1,
-    text='Open an audio file',
-    height = 2, 
-    width=20,
-    command=select_audio_file
-)
-open_audio_button.place(x=0, y=55) """
-
-""" preview = tk.Button(
-    tab1,
-    text='Preview',
-    height = 2, 
-    width=20,
-    command=preview_encoded_image
-)
-preview.place(x=0, y=105)
-
-encode_button = tk.Button(
-    tab1,
-    text='Encode',
-    height = 2, 
-    width=20,
-    command=encoding
-)
-encode_button.place(x=0, y=155) """
-
-baseImgdims = tk.Label(
-    tab1,
-    text=f'width: {base_img_width} height: {base_img_height}', 
-    bd=2, 
-    relief="sunken"
-)
-baseImgdims.place(x=173, y=620)
-
-open_img_filename = tk.Label(
-    tab1,
-    text="None Selected", 
-    bd=2, 
-    relief="sunken"
-)  
-open_img_filename.place(x=173, y=15)
-
-open_audio_filename = tk.Label(
-    tab1,
-    text="None Selected", 
-    bd=2, 
-    relief="sunken"
-)  
-open_audio_filename.place(x=173, y=65)
-
-inputimgFrame = tk.Frame(
-    tab1,
-    width=(500*base_w_scale+8), 
-    height=(500*base_h_scale+8), 
-    bd=2, 
-    relief="sunken"
-)
-inputimgFrame.place(x=173, y=105)
-
-disp_inputimg = tk.Label(tab1)
-disp_inputimg.place(x=175, y=107)
-
-outputFrame = tk.Frame(
-    tab1, 
-    width=(508), 
-    height=(508), 
-    bd=2, 
-    relief="sunken"
-)
-outputFrame.place(x=773, y=105)
-
-preview_img_label = tk.Label(
-    tab1,
-    text="1:1 scale", 
-    bd=2, 
-    relief="sunken"
-)  
-preview_img_label.place(x=773, y=620)
-
-checkbox_excrypt = tk.Checkbutton(tab1, text = "Encrypt Audio with Key", variable=encrypt_check)
-checkbox_excrypt.place(x=0, y=350)
-
-
-
-pb2_label = ttk.Label(tab1, text="64 Bit Encryption Key:")
-pb2_label.place(x=0,y=380)
-
-inputtextkey_tab1 = tk.Entry(tab1, width=24, bd=2)
-inputtextkey_tab1.place(x=0, y=405)
-
-textBox_tab1 = tk.Entry(tab1, width=24, bd=2)
-textBox_tab1.insert(0, "abc123")
-textBox_tab1.place(x=0, y=405)
-
-
-disp_img2 = tk.Label(tab1)
-disp_img2.place(x=775, y=107)
-
 progressbar_tab1 = ttk.Progressbar(tab1, orient="horizontal", length=150, mode='determinate')
 progressbar_tab1.place(x=0,y=205)
 
@@ -1215,13 +1146,7 @@ open_audio_filename_tab3 = tk.Label(
 )  
 open_audio_filename_tab3.place(x=173, y=5)
 
-open_audio_length = tk.Label(
-    tab3,
-    text="00m:00.00s", 
-    bd=2, 
-    relief="sunken"
-)  
-open_audio_length.place(x=173, y=25)
+
 
 play_audio_button = tk.Button(
     tab3,
@@ -1295,8 +1220,8 @@ pb2_label.place(x=0,y=465)
 
 
 if base_img_filename == 1 or audio_filename == 1:
-    preview.config(state="disabled")
-    encode_button.config(state="disabled")
+    #preview_btn.config(state="disabled")
+    #encode_btn.config(state="disabled")
     decode_button.config(state="disabled")
 
 if audio_filename == 1:
