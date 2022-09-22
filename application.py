@@ -2,7 +2,7 @@ import numpy as np
 import PIL
 from PIL import ImageTk,Image 
 import tkinter as tk
-from tkinter import filedialog as fd
+from tkinter import Menu, StringVar, filedialog as fd
 from tkinter import ttk
 from tkinter.messagebox import showinfo
 import time
@@ -13,11 +13,15 @@ import encryptionmodule
 from time import perf_counter
 import scipy
 import pygame
+import matplotlib
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 import matplotlib.pyplot as plt
 from tkinter import messagebox
 import threading
+
+matplotlib.rcParams['agg.path.chunksize'] = 10000
+
 
 pygame.mixer.init(frequency=44100, size=-16, channels=1)
 
@@ -43,6 +47,7 @@ encoded_img_filename = 1
 audio_filename = 1
 
 audioarray = 1
+audio_array_output = 1
 
 encrypt_check = tk.IntVar()
 
@@ -64,12 +69,12 @@ def get_digit(number, n):
 
 class GUI:
     
-
     def __init__(self, master):
         global open_audio_file_btn, open_audio_file_btn, open_img_filename, open_audio_filename, open_audio_length, preview_btn, encode_btn
         global baseImgdims, disp_inputimg, inputimgFrame, outputFrame, disp_img2, preview_img_label
 
         global open_audio_filename_tab3, openencodedimgfilename, disp_encodedimg, baseFrameencoded, textBox, playoutputaudiobutton, Exportoutputaudiobutton
+
         self.IsPaused = False
         self.current_audio = "Input"
 
@@ -164,6 +169,9 @@ class GUI:
         open_audio_filename_tab3 = tk.Label(tab3, text="None Selected", bd=2, relief="sunken")  
         open_audio_filename_tab3.place(x=173, y=5)
 
+        open_audio_length_tab3 = tk.Label(tab3, text="00m:00.00s", bd=2, relief="sunken")  
+        open_audio_length_tab3.place(x=173, y=25)
+
         play_audio_button = tk.Button(tab3, text='Play/pause', height = 2, width=20, command=self.play_pause_audio)
         play_audio_button.place(x=0, y=55)
 
@@ -192,6 +200,15 @@ class GUI:
         textBox.insert(0, "abc123")
         textBox.place(x=0, y=405)
 
+
+        plot_options = ("Input audio waveform", "Input audio spectrogram")
+        self.audio_plot_type = StringVar(root)
+        self.audio_plot_type.set("Input audio waveform")
+        self.current_plot_type = "Input audio waveform"
+        
+
+        plot_menu = ttk.OptionMenu(tab3, self.audio_plot_type, plot_options[0], *plot_options, command=self.change_plots)
+        plot_menu.place(x=150,y=150)
 
 
 
@@ -285,7 +302,7 @@ class GUI:
 
         open_audio_length.config(text=f"{math.floor(len(audioarray)/(48000*60))}m:{(len(audioarray) % (48000*60))/48000}s")
 
-        #plotaudio()
+        self.plotaudio(root)
 
         return audio_filename
 
@@ -359,6 +376,10 @@ class GUI:
         return encoded_img_filename
 
     def play_pause_audio(self): 
+        if type(audioarray).__name__ == "int":
+            messagebox.showerror('Program Error', 'Error: No audio file seleted')
+            return
+
         if self.current_audio == "Output":
             pygame.mixer.stop()
             self.current_audio = "Input"
@@ -377,6 +398,10 @@ class GUI:
             self.IsPaused = False     
 
     def playoutputaudio(self):
+        if type(audio_array_output).__name__ == "int":
+            messagebox.showerror('Program Error', 'Error: No encrypted audio avalible')
+            return
+
         if self.current_audio == "Input":
             pygame.mixer.stop()
             self.current_audio = "Output"
@@ -396,75 +421,6 @@ class GUI:
     def stop_audio(self):
         pygame.mixer.stop()
 
-    def pause_audio(self):
-        pygame.mixer.pause()
-
-    def plotaudio(self):
-        # the figure that will contain the plot
-        fig = Figure(figsize = (12, 3), dpi = 100)
-
-        fig.clear()
-    
-        
-        Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
-    
-        # plotting the graph
-        plot1 = fig.add_subplot(111)
-    
-        audioplt = plot1.plot(Time, audioarray)
-    
-        # creating the Tkinter canvas
-        # containing the Matplotlib figure
-        canvas = FigureCanvasTkAgg(fig, master = tab3)  
-        canvas.draw()
-    
-        # placing the canvas on the Tkinter window
-        canvas.get_tk_widget().place(x=173, y = 55)
-    
-        # creating the Matplotlib toolbar
-        toolbar = NavigationToolbar2Tk(canvas, tab3)
-        toolbar.update()
-    
-        # placing the toolbar on the Tkinter window
-        toolbar.place(x=173, y = 355)
-
-    def plotoutputaudio(self):
-        global audio_array_output
-        
-    
-        # the figure that will contain the plot
-        fig2 = Figure(figsize = (12, 3), dpi = 100)
-
-        fig2.clear()
-    
-        # list of squares
-        #y = audioarray
-        
-        # adding the subplot
-        #plot1 = fig.add_subplot(111)
-
-        Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
-    
-        # plotting the graph
-        plot2 = fig2.add_subplot(111)
-    
-        audioplt = plot2.plot(Time, audio_array_output)
-    
-        # creating the Tkinter canvas
-        # containing the Matplotlib figure
-        canvas = FigureCanvasTkAgg(fig2, master = tab3)  
-        canvas.draw()
-    
-        # placing the canvas on the Tkinter window
-        canvas.get_tk_widget().place(x=173, y = 405)
-    
-        # creating the Matplotlib toolbar
-        toolbar = NavigationToolbar2Tk(canvas, tab3)
-        toolbar.update()
-    
-        # placing the toolbar on the Tkinter window
-        toolbar.place(x=173, y = 705)
-
     def Exportaudio(self):
         export_audio_filename = fd.asksaveasfile(mode='w', defaultextension=".wav")
         y = np.int16(audio_array_output)
@@ -472,8 +428,96 @@ class GUI:
         song.export(str(export_audio_filename.name), format="wav", bitrate="48k") 
         print(str(export_audio_filename.name))
 
+    def change_plots(self, *args):
+        print(self.current_plot_type)
+        print(self.audio_plot_type.get())
+        if self.current_plot_type == self.audio_plot_type.get():
+            return
+        else:
+            
+            self.plotaudio(str(self.current_plot_type))
+            self.current_plot_type = self.audio_plot_type.get()
+            
 
 
+    def plotaudio(self, format):
+        #print("here")
+        #print(self.audio_plot_type.get())
+        #print(self.current_plot_type.get())
+        #print("")
+
+    
+            
+
+        if type(audioarray).__name__ == "int":
+            return
+        elif format == "Input audio waveform": 
+            # the figure that will contain the plot
+            fig = Figure(figsize = (12, 3), dpi = 100)
+
+            fig.clear()
+
+            
+            Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
+
+            # plotting the graph
+            plot1 = fig.add_subplot(111)
+
+            audioplt = plot1.plot(Time, audioarray)
+
+            # creating the Tkinter canvas
+            # containing the Matplotlib figure
+            canvas = FigureCanvasTkAgg(fig, master = tab3)  
+            canvas.draw()
+
+            # placing the canvas on the Tkinter window
+            canvas.get_tk_widget().place(x=173, y = 55)
+
+            # creating the Matplotlib toolbar
+            toolbar = NavigationToolbar2Tk(canvas, tab3)
+            toolbar.update()
+
+            # placing the toolbar on the Tkinter window
+            toolbar.place(x=173, y = 355) 
+
+        
+
+    def plotoutputaudio(self):
+        global audio_array_output
+        
+
+        # the figure that will contain the plot
+        fig2 = Figure(figsize = (12, 3), dpi = 100)
+
+        fig2.clear()
+
+        # list of squares
+        #y = audioarray
+        
+        # adding the subplot
+        #plot1 = fig.add_subplot(111)
+
+        Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
+
+        # plotting the graph
+        plot2 = fig2.add_subplot(111)
+
+        audioplt = plot2.plot(Time, audio_array_output)
+
+        # creating the Tkinter canvas
+        # containing the Matplotlib figure
+        canvas = FigureCanvasTkAgg(fig2, master = tab3)  
+        canvas.draw()
+
+        # placing the canvas on the Tkinter window
+        canvas.get_tk_widget().place(x=173, y = 405)
+
+        # creating the Matplotlib toolbar
+        toolbar = NavigationToolbar2Tk(canvas, tab3)
+        toolbar.update()
+
+        # placing the toolbar on the Tkinter window
+        toolbar.place(x=173, y = 705)
 
 
 
@@ -694,107 +738,6 @@ def encode_fcn():
     #im2 . show()
     im2.save(str(f.name), format="png")   
 
-""" 
-class Tab2_GUI:
-
-    def __init__(self, master):
-        global encoded_img_filename, encodedimg, encodedimg1, encoded_img_width, encoded_img_height, encoded_w_scale, encoded_h_scale, openencodedimgfilename, disp_encodedimg, baseFrameencoded, decode_button
-
-        open_encoded_img_button = tk.Button(tab2, text='Open an image file', height = 2, width=20, command=self.open_encoded_img_fn)
-        open_encoded_img_button.place(x=0, y=5)
-
-        decode_button = tk.Button(tab2, text='Decode', height = 2, width=20, command=decode_fn)
-        decode_button.place(x=0, y=55)
-
-        openencodedimgfilename = tk.Label(tab2, text="None Selected", bd=2, relief="sunken")  
-        openencodedimgfilename.place(x=173, y=15)
-
-        baseFrameencoded = tk.Frame(tab2, width=(500*base_w_scale+8), height=(500*base_h_scale+8), bd=2, relief="sunken")
-
-        disp_encodedimg = tk.Label(tab2)
-        disp_encodedimg.place(x=175, y=107)
-
-        baseFrameencoded.place(x=173, y=105)
-
-        decode_button.place(x=0, y=55)
-
-        pb2_label = ttk.Label(tab2, text="64 Bit Encryption Key:")
-        pb2_label.place(x=0,y=380)
-
-        inputtextkey = tk.Entry(tab2, width=24, bd=2)
-        inputtextkey.place(x=0, y=405)
-
-        textBox = tk.Entry(tab2, width=24, bd=2)
-        textBox.insert(0, "abc123")
-        textBox.place(x=0, y=405)
-
-
-
-    def open_encoded_img_fn(self):
-        global encoded_img_filename
-        global encodedimg
-        global encodedimg1
-        global encoded_img_width, encoded_img_height, encoded_w_scale, encoded_h_scale
-
-        filetypes = (
-            ("Image files", ("*.jpg", "*.png")),
-            ("All files", "*.*")
-        )
-
-        encoded_img_filename = fd.askopenfilename(
-            title = "Open a File",
-            initialdir="/",
-            filetypes=filetypes
-        )
-
-        if encoded_img_filename == "":
-            return
-
-        encoded_img_filename = "".join(encoded_img_filename)
-        
-
-
-        encodedimg = Image.open(encoded_img_filename)
-        encodedimg1 = ImageTk.PhotoImage(encodedimg)
-
-        openencodedimgfilename.config(text=encoded_img_filename.split("/")[-1])
-
-        encoded_img_width = encodedimg1.width()
-        encoded_img_height = encodedimg1.height()
-
-        
-
-        if encoded_img_width > encoded_img_height:
-            encoded_w_scale = 1
-            encoded_h_scale = encoded_img_height / encoded_img_width
-        elif encoded_img_height > encoded_img_width:
-            encoded_h_scale = 1
-            encoded_w_scale = encoded_img_width / encoded_img_height
-        elif encoded_img_width == encoded_img_height:
-            encoded_w_scale = 1
-            encoded_h_scale = 1
-        
-        print(encoded_w_scale)
-        print(encoded_h_scale)
-
-        encodedw = int(500 * encoded_w_scale)
-        encodedh = int(500 * encoded_h_scale)
-        resize_img = encodedimg.resize((encodedw, encodedh))
-        encodedimg = ImageTk.PhotoImage(resize_img)
-        disp_encodedimg.config(image=encodedimg)
-        disp_encodedimg.image = encodedimg
-
-
-        baseImgdims.config(text = f'witdth: {base_img_width} height: {base_img_height}')
-        baseImgdims.place_configure(y=500*base_h_scale+120)
-        
-        baseFrameencoded.config(width=(500*encoded_w_scale+8), height=(500*encoded_h_scale+8))
-
-        
-        return encoded_img_filename
-"""
-    
-
 def decode_fn():
     global base_img_filename
     img_decode = Image.open(base_img_filename)
@@ -822,85 +765,6 @@ def decode_fn():
     song = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
     song.export("decoded audio.mp3", format="mp3", bitrate="48k")
 
-
-""" class Tab3_GUI:
-    
-    def __init__(self, master):
-        global open_audio_filename_tab3, textBox, playoutputaudiobutton, Exportoutputaudiobutton, play_audio_button, encrypt_audio_button, decrypt_audio_button
-
-        open_audio_file_tab3_btn = tk.Button(tab3, text="Open audio file", height=2, width=20, command=self.open_audio_file_tab3_fn)
-        open_audio_file_tab3_btn.place(x=0, y=5)
-
-        open_audio_filename_tab3 = tk.Label(tab3, text="None Selected", bd=2, relief="sunken")  
-        open_audio_filename_tab3.place(x=173, y=5)
-
-        play_audio_button = tk.Button(tab3, text='Play audio', height = 2, width=20, command=playaudio)
-        play_audio_button.place(x=0, y=55)
-
-        playoutputaudiobutton = tk.Button(tab3, text='Play output audio', height = 2, width=20, command=playoutputaudio)
-        playoutputaudiobutton.place(x=0, y=105)
-
-        stopaudiobutton = tk.Button(tab3, text='Stop audio', height = 2, width=20, command=stopaudio)
-        stopaudiobutton.place(x=0, y=155)
-
-        encrypt_audio_button = tk.Button(tab3, text='Encrypt audio', height = 2, width=20, command=encrypt_audio)
-        encrypt_audio_button.place(x=0, y=225)
-
-        decrypt_audio_button = tk.Button(tab3, text='Decrypt audio', height = 2, width=20, command=decrypt_audio)
-        decrypt_audio_button.place(x=0, y=275)
-
-        Exportoutputaudiobutton = tk.Button(tab3, text='Export audio', height = 2, width=20, command=Exportaudio)
-        Exportoutputaudiobutton.place(x=0, y=325)
-
-        pb2_label = ttk.Label(tab3, text="64 Bit Encryption Key:")
-        pb2_label.place(x=0,y=380)
-
-        inputtextkey = tk.Entry(tab3, width=24, bd=2)
-        inputtextkey.place(x=0, y=405)
-
-        textBox = tk.Entry(tab3, width=24, bd=2)
-        textBox.insert(0, "abc123")
-        textBox.place(x=0, y=405)
-
-        pb2 = ttk.Progressbar(tab3, orient="horizontal", length=150, mode='determinate')
-        pb2.place(x=0,y=435)
-
-    def open_audio_file_tab3_fn(self):
-        global audioarray_tab3
-        global base_img_filename, audio_filename
-
-        filetypes = (
-            ("Audio files", ("*.mp3", "*.wav")),
-            ("All files", "*.*")
-        )
-
-        audio_filename = fd.askopenfilename(
-            title = "Open a File",
-            initialdir="/",
-            filetypes=filetypes
-        )
-
-        if audio_filename == "":
-            return
-
-        audio_filename = "".join(audio_filename)
-
-        open_audio_filename_tab3.config(text=audio_filename.split("/")[-1])
-
-        audioclip = pydub.AudioSegment.from_mp3(audio_filename)
-        audioarray = np.array(audioclip.get_array_of_samples())
-        
-        
-
-        open_audio_length.config(text=f"{math.floor(len(audioarray)/(48000*60))}m:{(len(audioarray) % (48000*60))/48000}s")
-
-        #plotaudio()
-
-        return audio_filename
-"""
-
-
-
 def general_progress_bar(increment, total):
     general_progress_bar1["value"] = increment/total * 100
     general_pb_label["text"] = update_general_pb()
@@ -908,73 +772,6 @@ def general_progress_bar(increment, total):
 
 def update_general_pb():
     return f"Current Progress: {round(general_progress_bar1['value'],1)}%"
-
-
-
-""" def select_encoded_image_file():
-    global encoded_img_filename
-    global encodedimg
-    global encodedimg1
-    global encoded_img_width, encoded_img_height, encoded_w_scale, encoded_h_scale
-
-    filetypes = (
-        ("Image files", ("*.jpg", "*.png")),
-        ("All files", "*.*")
-    )
-
-    encoded_img_filename = fd.askopenfilename(
-        title = "Open a File",
-        initialdir="/",
-        filetypes=filetypes
-    )
-
-    if encoded_img_filename == "":
-        return
-
-    encoded_img_filename = "".join(encoded_img_filename)
-    
-
-
-    encodedimg = Image.open(encoded_img_filename)
-    encodedimg1 = ImageTk.PhotoImage(encodedimg)
-
-    openencodedimgfilename.config(text=encoded_img_filename.split("/")[-1])
-
-    encoded_img_width = encodedimg1.width()
-    encoded_img_height = encodedimg1.height()
-
-    
-
-    if encoded_img_width > encoded_img_height:
-        encoded_w_scale = 1
-        encoded_h_scale = encoded_img_height / encoded_img_width
-    elif encoded_img_height > encoded_img_width:
-        encoded_h_scale = 1
-        encoded_w_scale = encoded_img_width / encoded_img_height
-    elif encoded_img_width == encoded_img_height:
-        encoded_w_scale = 1
-        encoded_h_scale = 1
-    
-    print(encoded_w_scale)
-    print(encoded_h_scale)
-
-    encodedw = int(500 * encoded_w_scale)
-    encodedh = int(500 * encoded_h_scale)
-    resize_img = encodedimg.resize((encodedw, encodedh))
-    encodedimg = ImageTk.PhotoImage(resize_img)
-    disp_encodedimg.config(image=encodedimg)
-    disp_encodedimg.image = encodedimg
-
-
-    baseImgdims.config(text = f'witdth: {base_img_width} height: {base_img_height}')
-    baseImgdims.place_configure(y=500*base_h_scale+120)
-    
-    baseFrameencoded.config(width=(500*encoded_w_scale+8), height=(500*encoded_h_scale+8))
-
-    
-    return encoded_img_filename"""
-
-
 
 def encrypt_audio():
     #start = perf_counter()
@@ -1046,19 +843,15 @@ def encrypt_audio():
     progressbar_popup.update_idletasks()
 
 
-    print(audioarray)
+    #print(audioarray)
 
     
     #duration = perf_counter() - start
     #print('{} took {:.3f} seconds\n\n'.format("c++", duration))
-
-    if "audio_array_output" in globals():
-        playoutputaudiobutton.config(state="normal")
-        Exportoutputaudiobutton.config(state="normal")
     
         
-    #progressbar_popup.destroy()
-    GUI.plotoutputaudio()
+    progressbar_popup.destroy()
+    gui_class.plotoutputaudio()
     return audio_array_output
 
 def decrypt_audio():
@@ -1114,11 +907,17 @@ def decrypt_audio():
         playoutputaudiobutton.config(state="normal")
         Exportoutputaudiobutton.config(state="normal")
 
-    GUI.plotoutputaudio()
+    gui_class.plotoutputaudio()
     return audio_array_output
 
+def donothing():
+    pass
 
 
+
+
+
+#menu1.place(x=150, y=150)
 
 
 
