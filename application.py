@@ -70,7 +70,7 @@ def get_digit(number, n):
 class GUI:
     
     def __init__(self, master):
-        global open_audio_file_btn, open_audio_file_btn, open_img_filename, open_audio_filename, open_audio_length, preview_btn, encode_btn
+        global open_audio_file_btn, open_audio_file_btn, open_img_filename, open_audio_filename, open_audio_length, preview_btn, encode_btn, open_audio_length_tab3
         global baseImgdims, disp_inputimg, inputimgFrame, outputFrame, disp_img2, preview_img_label
 
         global open_audio_filename_tab3, openencodedimgfilename, disp_encodedimg, baseFrameencoded, textBox, playoutputaudiobutton, Exportoutputaudiobutton
@@ -201,14 +201,21 @@ class GUI:
         textBox.place(x=0, y=405)
 
 
-        plot_options = ("Input audio waveform", "Input audio spectrogram")
+        plot_options = ("Input audio waveform", "Input audio spectrogram", "Output audio waveform", "Output audio spectrogram")
         self.audio_plot_type = StringVar(root)
         self.audio_plot_type.set("Input audio waveform")
         self.current_plot_type = "Input audio waveform"
         
+        plot_menu = tk.OptionMenu(tab3, self.audio_plot_type, *plot_options, command=self.change_plot1)
+        plot_menu.place(x=173, y=395)
 
-        plot_menu = ttk.OptionMenu(tab3, self.audio_plot_type, plot_options[0], *plot_options, command=self.change_plots)
-        plot_menu.place(x=150,y=150)
+        plot2_options = ("Input audio waveform", "Input audio spectrogram", "Output audio waveform", "Output audio spectrogram")
+        self.audio_plot2_type = StringVar(root)
+        self.audio_plot2_type.set("Output audio waveform")
+        self.current_plot2_type = "Output audio waveform"
+        
+        plot2_menu = tk.OptionMenu(tab3, self.audio_plot2_type, *plot2_options, command=self.change_plot2)
+        plot2_menu.place(x=173, y=775)
 
 
 
@@ -269,6 +276,7 @@ class GUI:
         
         inputimgFrame.config(width=(500*base_w_scale+8), height=(500*base_h_scale+8))
         
+        self.audio_plot1(str(self.audio_plot_type.get()))
 
         #print(base_img_filename)
         return base_img_filename
@@ -293,6 +301,7 @@ class GUI:
 
         audio_filename = "".join(audio_filename)
 
+        open_audio_filename.config(text=audio_filename.split("/"[-1]))
         open_audio_filename_tab3.config(text=audio_filename.split("/")[-1])
 
         audioclip = pydub.AudioSegment.from_mp3(audio_filename)
@@ -301,8 +310,10 @@ class GUI:
         
 
         open_audio_length.config(text=f"{math.floor(len(audioarray)/(48000*60))}m:{(len(audioarray) % (48000*60))/48000}s")
+        open_audio_length_tab3.config(text=f"{math.floor(len(audioarray)/(48000*60))}m:{(len(audioarray) % (48000*60))/48000}s")
 
-        self.plotaudio(root)
+        self.audio_plot1(self.audio_plot_type.get())
+        self.audio_plot2(self.audio_plot2_type.get())
 
         return audio_filename
 
@@ -428,29 +439,27 @@ class GUI:
         song.export(str(export_audio_filename.name), format="wav", bitrate="48k") 
         print(str(export_audio_filename.name))
 
-    def change_plots(self, *args):
-        print(self.current_plot_type)
-        print(self.audio_plot_type.get())
+    def change_plot1(self, *args):
         if self.current_plot_type == self.audio_plot_type.get():
             return
         else:
-            
-            self.plotaudio(str(self.current_plot_type))
             self.current_plot_type = self.audio_plot_type.get()
-            
+            self.audio_plot1(str(self.current_plot_type))
 
+    def change_plot2(self, *args):
+        if self.current_plot2_type == self.audio_plot2_type.get():
+            return
+        else:
+            self.current_plot2_type = self.audio_plot2_type.get()
+            self.audio_plot2(str(self.current_plot2_type))
+        
 
-    def plotaudio(self, format):
-        #print("here")
-        #print(self.audio_plot_type.get())
-        #print(self.current_plot_type.get())
-        #print("")
-
-    
-            
+    def audio_plot1(self, format):
+        global audio_array_output
 
         if type(audioarray).__name__ == "int":
             return
+
         elif format == "Input audio waveform": 
             # the figure that will contain the plot
             fig = Figure(figsize = (12, 3), dpi = 100)
@@ -480,45 +489,225 @@ class GUI:
             # placing the toolbar on the Tkinter window
             toolbar.place(x=173, y = 355) 
 
-        
+        elif format == "Input audio spectrogram":
+            fig = Figure(figsize = (12, 3), dpi = 100)
 
-    def plotoutputaudio(self):
+            fig.clear()
+
+            
+            Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
+
+            # plotting the graph
+            plot1 = fig.add_subplot(111)
+
+            audioplt = plot1.specgram(audioarray, Fs=48000)
+
+            # creating the Tkinter canvas
+            # containing the Matplotlib figure
+            canvas = FigureCanvasTkAgg(fig, master = tab3)  
+            canvas.draw()
+
+            # placing the canvas on the Tkinter window
+            canvas.get_tk_widget().place(x=173, y = 55)
+
+            # creating the Matplotlib toolbar
+            toolbar = NavigationToolbar2Tk(canvas, tab3)
+            toolbar.update()
+
+            # placing the toolbar on the Tkinter window
+            toolbar.place(x=173, y = 355) 
+
+        elif format == "Output audio waveform":
+            if type(audio_array_output).__name__ == "int":
+                return
+
+            # the figure that will contain the plot
+            fig = Figure(figsize = (12, 3), dpi = 100)
+
+            fig.clear()
+
+            
+            Time = np.linspace(0, len(audio_array_output) / 48000, num=len(audio_array_output))
+
+            # plotting the graph
+            plot1 = fig.add_subplot(111)
+
+            audioplt = plot1.plot(Time, audio_array_output)
+
+            # creating the Tkinter canvas
+            # containing the Matplotlib figure
+            canvas = FigureCanvasTkAgg(fig, master = tab3)  
+            canvas.draw()
+
+            # placing the canvas on the Tkinter window
+            canvas.get_tk_widget().place(x=173, y = 55)
+
+            # creating the Matplotlib toolbar
+            toolbar = NavigationToolbar2Tk(canvas, tab3)
+            toolbar.update()
+
+            # placing the toolbar on the Tkinter window
+            toolbar.place(x=173, y = 355) 
+
+        elif format == "Output audio spectrogram":
+            if type(audio_array_output).__name__ == "int":
+                return
+
+            fig = Figure(figsize = (12, 3), dpi = 100)
+
+            fig.clear()
+
+            
+            Time = np.linspace(0, len(audio_array_output) / 48000, num=len(audio_array_output))
+
+            # plotting the graph
+            plot1 = fig.add_subplot(111)
+
+            audioplt = plot1.specgram(audio_array_output, Fs=48000)
+
+            # creating the Tkinter canvas
+            # containing the Matplotlib figure
+            canvas = FigureCanvasTkAgg(fig, master = tab3)  
+            canvas.draw()
+
+            # placing the canvas on the Tkinter window
+            canvas.get_tk_widget().place(x=173, y = 55)
+
+            # creating the Matplotlib toolbar
+            toolbar = NavigationToolbar2Tk(canvas, tab3)
+            toolbar.update()
+
+            # placing the toolbar on the Tkinter window
+            toolbar.place(x=173, y = 355) 
+        
+    def audio_plot2(self, format):
         global audio_array_output
+
+        if format == "Input audio waveform": 
+            if type(audioarray).__name__ == "int":
+                return
+            # the figure that will contain the plot
+            fig2 = Figure(figsize = (12, 3), dpi = 100)
+
+            fig2.clear()
+
+            
+            Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
+
+            # plotting the graph
+            plot2 = fig2.add_subplot(111)
+
+            audioplt = plot2.plot(Time, audioarray)
+
+            # creating the Tkinter canvas
+            # containing the Matplotlib figure
+            canvas = FigureCanvasTkAgg(fig2, master = tab3)  
+            canvas.draw()
+
+            # placing the canvas on the Tkinter window
+            canvas.get_tk_widget().place(x=173, y = 435)
+
+            # creating the Matplotlib toolbar
+            toolbar = NavigationToolbar2Tk(canvas, tab3)
+            toolbar.update()
+
+            # placing the toolbar on the Tkinter window
+            toolbar.place(x=173, y = 735) 
+
+        elif format == "Input audio spectrogram":
+            if type(audioarray).__name__ == "int":
+                return
+
+            fig = Figure(figsize = (12, 3), dpi = 100)
+
+            fig.clear()
+
+            
+            Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
+
+            # plotting the graph
+            plot1 = fig.add_subplot(111)
+
+            audioplt = plot1.specgram(audioarray, Fs=48000)
+
+            # creating the Tkinter canvas
+            # containing the Matplotlib figure
+            canvas = FigureCanvasTkAgg(fig, master = tab3)  
+            canvas.draw()
+
+            # placing the canvas on the Tkinter window
+            canvas.get_tk_widget().place(x=173, y = 435)
+
+            # creating the Matplotlib toolbar
+            toolbar = NavigationToolbar2Tk(canvas, tab3)
+            toolbar.update()
+
+            # placing the toolbar on the Tkinter window
+            toolbar.place(x=173, y = 735) 
+
+        elif format == "Output audio waveform": 
+            if type(audio_array_output).__name__ == "int":
+                return
+
+            # the figure that will contain the plot
+            fig = Figure(figsize = (12, 3), dpi = 100)
+
+            fig.clear()
+
+            
+            Time = np.linspace(0, len(audio_array_output) / 48000, num=len(audio_array_output))
+
+            # plotting the graph
+            plot1 = fig.add_subplot(111)
+
+            audioplt = plot1.plot(Time, audio_array_output)
+
+            # creating the Tkinter canvas
+            # containing the Matplotlib figure
+            canvas = FigureCanvasTkAgg(fig, master = tab3)  
+            canvas.draw()
+
+            # placing the canvas on the Tkinter window
+            canvas.get_tk_widget().place(x=173, y = 435)
+
+            # creating the Matplotlib toolbar
+            toolbar = NavigationToolbar2Tk(canvas, tab3)
+            toolbar.update()
+
+            # placing the toolbar on the Tkinter window
+            toolbar.place(x=173, y = 735) 
+
+        elif format == "Output audio spectrogram":
+            if type(audio_array_output).__name__ == "int":
+                return
+
+            fig = Figure(figsize = (12, 3), dpi = 100)
+
+            fig.clear()
+
+            
+            Time = np.linspace(0, len(audio_array_output) / 48000, num=len(audio_array_output))
+
+            # plotting the graph
+            plot1 = fig.add_subplot(111)
+
+            audioplt = plot1.specgram(audio_array_output, Fs=48000)
+
+            # creating the Tkinter canvas
+            # containing the Matplotlib figure
+            canvas = FigureCanvasTkAgg(fig, master = tab3)  
+            canvas.draw()
+
+            # placing the canvas on the Tkinter window
+            canvas.get_tk_widget().place(x=173, y = 435)
+
+            # creating the Matplotlib toolbar
+            toolbar = NavigationToolbar2Tk(canvas, tab3)
+            toolbar.update()
+
+            # placing the toolbar on the Tkinter window
+            toolbar.place(x=173, y = 735) 
         
-
-        # the figure that will contain the plot
-        fig2 = Figure(figsize = (12, 3), dpi = 100)
-
-        fig2.clear()
-
-        # list of squares
-        #y = audioarray
-        
-        # adding the subplot
-        #plot1 = fig.add_subplot(111)
-
-        Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
-
-        # plotting the graph
-        plot2 = fig2.add_subplot(111)
-
-        audioplt = plot2.plot(Time, audio_array_output)
-
-        # creating the Tkinter canvas
-        # containing the Matplotlib figure
-        canvas = FigureCanvasTkAgg(fig2, master = tab3)  
-        canvas.draw()
-
-        # placing the canvas on the Tkinter window
-        canvas.get_tk_widget().place(x=173, y = 405)
-
-        # creating the Matplotlib toolbar
-        toolbar = NavigationToolbar2Tk(canvas, tab3)
-        toolbar.update()
-
-        # placing the toolbar on the Tkinter window
-        toolbar.place(x=173, y = 705)
-
 
 
 
@@ -851,7 +1040,9 @@ def encrypt_audio():
     
         
     progressbar_popup.destroy()
-    gui_class.plotoutputaudio()
+    del progressbar_popup
+    gui_class.audio_plot2(str(gui_class.current_plot2_type))
+    gui_class.audio_plot1(str(gui_class.current_plot_type))
     return audio_array_output
 
 def decrypt_audio():
@@ -907,18 +1098,11 @@ def decrypt_audio():
         playoutputaudiobutton.config(state="normal")
         Exportoutputaudiobutton.config(state="normal")
 
-    gui_class.plotoutputaudio()
+    gui_class.audio_plot2()
     return audio_array_output
 
 def donothing():
     pass
-
-
-
-
-
-#menu1.place(x=150, y=150)
-
 
 
 
