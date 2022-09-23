@@ -80,10 +80,10 @@ class GUI:
 
         
         # Tab1 gui
-        open_img_file_btn = tk.Button(tab1, text="Open image file", height = 2, width = 20, command=self.open_img_file_fcn)
+        open_img_file_btn = tk.Button(tab1, text="Open image file", height = 2, width = 20, command=self.open_img_file_fn)
         open_img_file_btn.place(x=0, y=0)
 
-        open_audio_file_btn = tk.Button(tab1, text='Open audio file', height = 2, width = 20, command=self.open_audio_file_fcn)
+        open_audio_file_btn = tk.Button(tab1, text='Open audio file', height = 2, width = 20, command=self.open_audio_file_fn)
         open_audio_file_btn.place(x=0, y=55)
 
         open_img_filename = tk.Label(tab1,text="None Selected", bd=2, relief="sunken")  
@@ -163,7 +163,7 @@ class GUI:
         textBox.place(x=0, y=405)
 
         # Tab3 gui
-        open_audio_file_tab3_btn = tk.Button(tab3, text="Open audio file", height=2, width=20, command=self.open_audio_file_fcn)
+        open_audio_file_tab3_btn = tk.Button(tab3, text="Open audio file", height=2, width=20, command=self.open_audio_file_fn)
         open_audio_file_tab3_btn.place(x=0, y=5)
 
         open_audio_filename_tab3 = tk.Label(tab3, text="None Selected", bd=2, relief="sunken")  
@@ -218,8 +218,7 @@ class GUI:
         plot2_menu.place(x=173, y=775)
 
 
-
-    def open_img_file_fcn(self):
+    def open_img_file_fn(self):
 
         global audioarray
         global base_img_filename, audio_filename
@@ -281,7 +280,7 @@ class GUI:
         #print(base_img_filename)
         return base_img_filename
 
-    def open_audio_file_fcn(self):
+    def open_audio_file_fn(self):
         global audioarray
         global base_img_filename, audio_filename
 
@@ -318,10 +317,10 @@ class GUI:
         return audio_filename
 
     def preview_threading_fn(self):
-        threading.Thread(target=preview_fcn).start()
+        threading.Thread(target=preview_fn).start()
 
     def encode_threading_fn(self):
-        threading.Thread(target=encode_fcn).start()
+        threading.Thread(target=encode_fn).start()
 
     def open_encoded_img_fn(self):
         global encoded_img_filename
@@ -453,7 +452,6 @@ class GUI:
             self.current_plot2_type = self.audio_plot2_type.get()
             self.audio_plot2(str(self.current_plot2_type))
         
-
     def audio_plot1(self, format):
         global audio_array_output
 
@@ -710,8 +708,7 @@ class GUI:
         
 
 
-
-def preview_fcn():
+def preview_fn():
     global audioarray
     global base_img_filename, audio_filename
 
@@ -841,7 +838,7 @@ def preview_fcn():
                 
     progressbar_popup.destroy()
 
-def encode_fcn():
+def encode_fn():
     global audioarray
     global base_img_filename, audio_filename
 
