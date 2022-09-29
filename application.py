@@ -2,8 +2,8 @@ import numpy as np
 import PIL
 from PIL import ImageTk,Image 
 import tkinter as tk
-from tkinter import Menu, StringVar, filedialog as fd
-from tkinter import ttk
+from tkinter import HORIZONTAL, Menu, StringVar, filedialog as fd
+from tkinter import ttk, font
 from tkinter.messagebox import showinfo
 import time
 import math
@@ -48,8 +48,10 @@ audio_filename = 1
 
 audioarray = 1
 audio_array_output = 1
+audio_array_to_encode = 1
 
 encrypt_check = tk.IntVar()
+remove_silence_check = tk.IntVar()
 
 tabControl = ttk.Notebook(root)
 
@@ -79,12 +81,13 @@ class GUI:
         self.current_audio = "Input"
 
         
-        # Tab1 gui
-        open_img_file_btn = tk.Button(tab1, text="Open image file", height = 2, width = 20, command=self.open_img_file_fn)
-        open_img_file_btn.place(x=0, y=0)
 
-        open_audio_file_btn = tk.Button(tab1, text='Open audio file', height = 2, width = 20, command=self.open_audio_file_fn)
-        open_audio_file_btn.place(x=0, y=55)
+        # Tab1 gui #####################################################
+        open_img_file_btn = tk.Button(tab1, text="Open image file", height = 2, command=self.open_img_file_fn)
+        open_img_file_btn.place(x=0, y=0, width=150)
+
+        open_audio_file_btn = tk.Button(tab1, text='Open audio file', height = 2, command=self.open_audio_file_fn)
+        open_audio_file_btn.place(x=0, y=55, width=150)
 
         open_img_filename = tk.Label(tab1,text="None Selected", bd=2, relief="sunken")  
         open_img_filename.place(x=173, y=15)
@@ -95,14 +98,59 @@ class GUI:
         open_audio_length = tk.Label(tab1, text="00m:00.00s", bd=2, relief="sunken")  
         open_audio_length.place(x=173, y=75)
 
-        preview_btn = tk.Button(tab1, text='Preview', height = 2, width = 20, command=self.preview_threading_fn)
-        preview_btn.place(x=0, y=105)
+        preview_btn = tk.Button(tab1, text='Preview', height = 2, command=self.preview_threading_fn)
+        preview_btn.place(x=0, y=105, width=150)
 
-        encode_btn = tk.Button(tab1, text='Encode', height = 2, width = 20, command=self.encode_threading_fn)
-        encode_btn.place(x=0, y=155)
+        encode_btn = tk.Button(tab1, text='Encode', height = 2, command=self.encode_threading_fn)
+        encode_btn.place(x=0, y=155, width=150)
+
+        additional_features = tk.Label(tab1, text="Additional Features:", font= ('TkDefaultFont 9 bold underline'))
+        additional_features.place(x=0, y=210)
+
+        additional_features_frame = tk.Frame(tab1, width=165, height=400, bd=2, relief="sunken")
+        additional_features_frame.place(x=0, y=235)
+
+        encoding_options_label = tk.Label(additional_features_frame, text="Encoding Method:", font= ('TkDefaultFont 9 bold underline'))
+        encoding_options_label.place(x=0, y=0)
+
+        encoding_options = ("Input audio waveform", "Input audio specffffffffffffffffffftrogram", "Output audio waveform", "Output audio spectrogram")
+        self.encoding_type = StringVar(root)
+        self.encoding_type.set("Input audio waveform")
+        
+        encoding_options_menu = tk.OptionMenu(additional_features_frame, self.encoding_type, *encoding_options, command=donothing)
+        encoding_options_menu.config(justify="left")
+        encoding_options_menu.place(x=0, y=20, width=160, height=25)
+
+        encoding_options_label = tk.Label(additional_features_frame, text="Encryption:", font= ('TkDefaultFont 9 bold underline'))
+        encoding_options_label.place(x=0, y=50)
+
+        checkbox_excrypt = tk.Checkbutton(additional_features_frame, text = "Encrypt Audio with Key", variable=encrypt_check)
+        checkbox_excrypt.place(x=0, y=75)
+
+        key_entry_label = ttk.Label(additional_features_frame, text="64 Bit Encryption Key:")
+        key_entry_label.place(x=0,y=100)
+
+        inputtextkey_tab1 = tk.Entry(additional_features_frame, bd=2)
+        inputtextkey_tab1.place(x=2, y=125, width=156)
+
+        textBox_tab1 = tk.Entry(additional_features_frame, bd=2)
+        textBox_tab1.insert(0, "abc123")
+        textBox_tab1.place(x=2, y=125, width=156)
+
+        encoding_options_label = tk.Label(additional_features_frame, text="Remove Silence:", font= ('TkDefaultFont 9 bold underline'))
+        encoding_options_label.place(x=0, y=150)
+
+        checkbox_remove_silence = tk.Checkbutton(additional_features_frame, text = "Remove Silence", variable=remove_silence_check)
+        checkbox_remove_silence.place(x=0, y=175)
+
+        dB_label = tk.Label(additional_features_frame, text="dB cutoff")
+        dB_label.place(x=105, y=220)
+
+        silence_dB_level = tk.Scale(additional_features_frame, from_=-60 , to=-0, orient=HORIZONTAL)
+        silence_dB_level.place(x=0, y=200)
 
         baseImgdims = tk.Label(tab1,text=f'width: {base_img_width} height: {base_img_height}', bd=2, relief="sunken")
-        baseImgdims.place(x=173, y=620)
+        baseImgdims.place(x=173, y=385)
 
         inputimgFrame = tk.Frame(tab1, width=(500*base_w_scale+8), height=(500*base_h_scale+8), bd=2, relief="sunken")
         inputimgFrame.place(x=173, y=105)
@@ -116,24 +164,14 @@ class GUI:
         preview_img_label = tk.Label(tab1, text="1:1 scale", bd=2, relief="sunken")  
         preview_img_label.place(x=773, y=620)
 
-        checkbox_excrypt = tk.Checkbutton(tab1, text = "Encrypt Audio with Key", variable=encrypt_check)
-        checkbox_excrypt.place(x=0, y=350)
-
-        key_entry_label = ttk.Label(tab1, text="64 Bit Encryption Key:")
-        key_entry_label.place(x=0,y=380)
-
-        inputtextkey_tab1 = tk.Entry(tab1, width=24, bd=2)
-        inputtextkey_tab1.place(x=0, y=405)
-
-        textBox_tab1 = tk.Entry(tab1, width=24, bd=2)
-        textBox_tab1.insert(0, "abc123")
-        textBox_tab1.place(x=0, y=405)
-
+        
 
         disp_img2 = tk.Label(tab1)
         disp_img2.place(x=775, y=107)
 
-        # Tab2 gui
+
+
+        # Tab2 gui ######################################
         open_encoded_img_button = tk.Button(tab2, text='Open an image file', height = 2, width=20, command=self.open_encoded_img_fn)
         open_encoded_img_button.place(x=0, y=5)
 
@@ -162,7 +200,9 @@ class GUI:
         textBox.insert(0, "abc123")
         textBox.place(x=0, y=405)
 
-        # Tab3 gui
+
+
+        # Tab3 gui ########################################
         open_audio_file_tab3_btn = tk.Button(tab3, text="Open audio file", height=2, width=20, command=self.open_audio_file_fn)
         open_audio_file_tab3_btn.place(x=0, y=5)
 
@@ -305,8 +345,6 @@ class GUI:
 
         audioclip = pydub.AudioSegment.from_mp3(audio_filename)
         audioarray = np.array(audioclip.get_array_of_samples())
-        
-        
 
         open_audio_length.config(text=f"{math.floor(len(audioarray)/(48000*60))}m:{(len(audioarray) % (48000*60))/48000}s")
         open_audio_length_tab3.config(text=f"{math.floor(len(audioarray)/(48000*60))}m:{(len(audioarray) % (48000*60))/48000}s")
@@ -839,7 +877,7 @@ def preview_fn():
     progressbar_popup.destroy()
 
 def encode_fn():
-    global audioarray
+    global audioarray, audio_array_to_encode
     global base_img_filename, audio_filename
 
     f = fd.asksaveasfile(mode='w', defaultextension=".png")
@@ -851,7 +889,7 @@ def encode_fn():
     
     a = np.array(im)
 
-    # popup progress bar code ######
+    # popup progress bar code #####################################
     global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
 
     progressbar_popup = tk.Toplevel(height=100, width=400)
@@ -866,26 +904,28 @@ def encode_fn():
 
     progressbar_popup.update_idletasks()
     
-    ###############################
-
-    #audioclip = pydub.AudioSegment.from_mp3(audiofilename)
-    #audioarray = np.array(audioclip.get_array_of_samples())
-    #audioarray = audioarray + (2**16)/2
-    #audioarray = np.rint((audioarray / 2**16) * 999)
+    ##############################################################
+    
+    audio_array_to_encode = audioarray
 
     
-    
-    if encrypt_check.get() == 1:
-        encrypt_audio()
-        audioarray_to_encode = audio_array_output
+    if remove_silence_check.get() == 1:
+        remove_silence()
         progressbar_label.config(text="Audio is being encoded")
         progressbar_popup.update_idletasks()
+        
+    if encrypt_check.get() == 1:
+        encrypt_audio()
+        #audioarray_to_encode = audio_array_output
+        progressbar_label.config(text="Audio is being encoded")
+        progressbar_popup.update_idletasks()
+
     elif encrypt_check.get() == 0:
-        audioarray_to_encode = audioarray
+        #audioarray_to_encode = audioarray
+        pass
 
 
     for x in range(len(a)):
-        #print(x)
         for y in range(len(a[x])):
             for z in range(len(a[x][y])):
                 
@@ -895,20 +935,57 @@ def encode_fn():
 
                 a[x][y][z] = round(a[x][y][z]/10) * 10
                 
-                if x*len(a[x])+y < len(audioarray_to_encode):
-                    digit = get_digit(audioarray_to_encode[x*len(a[x])+y], z)
+                if x*len(a[x])+y < len(audio_array_to_encode)*2:
+                    if ((x*len(a[x])+y) % 2) == 0:
+                        if len(str(audio_array_to_encode[x*len(a[x])+y])) < 5-z:
+                            digit = 0
+                        else:
+                            digit = get_digit(audio_array_to_encode[x*len(a[x])+y], 5-z)
+
+                        if a[x][y][z] == 250 and digit > 5:
+                            a[x][y][z] = 240
+
+
+                        colourValue = int(a[x][y][z]) + int(digit)
+
+                        if colourValue >= 256:
+                            colourValue = 255
+
+                        a[x][y][z] = colourValue
+
+
+                    if ((x*len(a[x])+y) % 2) == 1:
+                        if len(str(audio_array_to_encode[x*len(a[x])+y])) < 2-z:
+                            digit = 0
+                        else:
+                            digit = get_digit(audio_array_to_encode[x*len(a[x])+y], 2-z)
+
+                        if a[x][y][z] == 250 and digit > 5:
+                            a[x][y][z] = 240
+
+
+                        colourValue = int(a[x][y][z]) + int(digit)
+
+                        if colourValue >= 256:
+                            colourValue = 255
+
+                        a[x][y][z] = colourValue
+
+
+                """ if x*len(a[x])+y < len(audio_array_to_encode):
+                    digit = get_digit(audio_array_to_encode[x*len(a[x])+y], z)
+
                     if a[x][y][z] == 250 and digit > 5:
                         a[x][y][z] = 240
+
+
                     colourValue = int(a[x][y][z]) + int(digit)
 
                     if colourValue >= 256:
                         colourValue = 255
 
-                    a[x][y][z] = colourValue
-
-                
-                #print(str(digit) + "  " + str(audioarray[x*len(a[x])+y]))
-        
+                    a[x][y][z] = colourValue """
+      
         general_progress_bar(x, len(a))
         progressbar_popup.update_idletasks()
         
@@ -951,21 +1028,16 @@ def decode_fn():
     song = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
     song.export("decoded audio.mp3", format="mp3", bitrate="48k")
 
-def general_progress_bar(increment, total):
-    general_progress_bar1["value"] = increment/total * 100
-    general_pb_label["text"] = update_general_pb()
-    progressbar_popup.update_idletasks()
-
-def update_general_pb():
-    return f"Current Progress: {round(general_progress_bar1['value'],1)}%"
-
 def encrypt_audio():
     #start = perf_counter()
-    global audioarray
+    global audio_array_to_encode
     global audio_array_output
 
     pygame.mixer.stop()
-    # popup progress bar code ######
+
+
+
+    # popup progress bar code #####################################
     global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
 
     if "progressbar_popup" in globals():
@@ -985,11 +1057,11 @@ def encrypt_audio():
 
     progressbar_popup.update_idletasks()
     
-    ###############################
+    ##############################################################
     
 
     
-    audio_array_output = np.zeros(len(audioarray))
+    audio_array_output = np.zeros(len(audio_array_to_encode))
     
 
     percentofaudio = round(len(audio_array_output) * .001) 
@@ -1014,14 +1086,14 @@ def encrypt_audio():
         messagebox.showerror('Program Error', 'Error: Key size is greater than 64 bits')
         return
 
-    for x in range(len(audioarray)):
-        audio_array_output[x] = encryptionmodule.encrypt(intkey, int(audioarray[x]), x)
+    for x in range(len(audio_array_to_encode)):
+        audio_array_output[x] = encryptionmodule.encrypt(intkey, int(audio_array_to_encode[x]), x)
 
         
         
         if x > 0:
             if x % percentofaudio == 0: 
-                general_progress_bar(x, len(audioarray))
+                general_progress_bar(x, len(audio_array_to_encode))
                 progressbar_popup.update_idletasks()
 
         
@@ -1036,11 +1108,13 @@ def encrypt_audio():
     #print('{} took {:.3f} seconds\n\n'.format("c++", duration))
     
         
-    progressbar_popup.destroy()
-    del progressbar_popup
+    #progressbar_popup.destroy()
+    #del progressbar_popup
     gui_class.audio_plot2(str(gui_class.current_plot2_type))
     gui_class.audio_plot1(str(gui_class.current_plot_type))
-    return audio_array_output
+
+    audio_array_to_encode = audio_array_output
+    return audio_array_to_encode
 
 def decrypt_audio():
     #start = perf_counter()
@@ -1097,6 +1171,101 @@ def decrypt_audio():
 
     gui_class.audio_plot2()
     return audio_array_output
+
+def remove_silence():
+    global audio_array_to_encode
+
+
+    # popup progress bar code #####################################
+    global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
+
+    if "progressbar_popup" in globals():
+        pass
+    else:
+        progressbar_popup = tk.Toplevel(height=100, width=400)
+
+
+    progressbar_label = tk.Label(progressbar_popup, text="Silence is being removed")
+    progressbar_label.place(x=150, y=25)
+    
+    general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient="horizontal", length=350, mode='determinate')
+    general_progress_bar1.place(x=25, y=50)
+
+    general_pb_label = ttk.Label(progressbar_popup, text="0%")
+    general_pb_label.place(x=150,y=75)
+
+    progressbar_popup.update_idletasks()
+    
+    ##############################################################
+
+
+
+    cutoff_level = -50 #dB
+    max_value =  10**(cutoff_level/20)*((2**16)/2)
+
+    for x in range(len(audio_array_to_encode)):
+        if -max_value <= audio_array_to_encode[x] <= max_value:
+            audio_array_to_encode[x] = 0
+
+    zero_locations = np.where(np.array(audio_array_to_encode) == 0)
+    start_index = zero_locations[0][0]
+    length = 1
+    array_of_zeros = []
+
+    
+    for x in range(len(zero_locations[0])):
+        if x == 0:
+            pass
+        elif zero_locations[0][x] == zero_locations[0][x-1] + 1:
+            length += 1
+            if x == len(zero_locations[0])-1:
+                array_of_zeros.append(start_index)
+                array_of_zeros.append(length)
+        elif zero_locations[0][x] != zero_locations[0][x-1] + 1:
+            if length >= 600:
+                array_of_zeros.append(start_index)
+                array_of_zeros.append(length)
+            start_index = zero_locations[0][x]
+            length = 1
+        
+    audio_array_list = audio_array_to_encode.tolist()
+
+    for y in range(len(array_of_zeros)-2,-1,-2):
+        del audio_array_list[array_of_zeros[y]:(array_of_zeros[y]+(array_of_zeros[y+1]))]
+
+
+    audio_array_list.append(10101)
+    audio_array_list.append(20202)
+    audio_array_list.append(30303)
+
+    for z in range(len(array_of_zeros)):
+        audio_array_list.append(math.floor(int(array_of_zeros[z])/(2**16)))
+        audio_array_list.append(array_of_zeros[z] % (2**16))
+
+
+
+    audio_array_to_encode = np.array(audio_array_list)
+   
+    general_progress_bar(1, 1)
+    progressbar_popup.update_idletasks()
+    #progressbar_popup.destroy()
+    #del progressbar_popup
+
+    return audio_array_to_encode
+
+
+
+
+
+
+def general_progress_bar(increment, total):
+    general_progress_bar1["value"] = increment/total * 100
+    general_pb_label["text"] = update_general_pb()
+    progressbar_popup.update_idletasks()
+
+def update_general_pb():
+    return f"Current Progress: {round(general_progress_bar1['value'],1)}%"
+
 
 def donothing():
     pass
