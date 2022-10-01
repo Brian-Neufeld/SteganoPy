@@ -905,14 +905,14 @@ def encode_fn():
     progressbar_popup.update_idletasks()
     
     ##############################################################
-    
-    audio_array_to_encode = audioarray
 
+    audio_array_to_encode = audioarray
     
     if remove_silence_check.get() == 1:
         remove_silence()
         progressbar_label.config(text="Audio is being encoded")
         progressbar_popup.update_idletasks()
+        print("done")
         
     if encrypt_check.get() == 1:
         encrypt_audio()
@@ -924,81 +924,48 @@ def encode_fn():
         #audioarray_to_encode = audioarray
         pass
 
-
+    audio_index = 0
+    audio_array_to_encode = audio_array_to_encode + ((2**16)/2)
+    audio_array_to_encode = audio_array_to_encode.astype(int)
+    
     for x in range(len(a)):
         for y in range(len(a[x])):
             for z in range(len(a[x][y])):
-                
-                if a[x][y][z] >= 250:
-                    a[x][y][z] = 250
-                    
+                if audio_index < len(audio_array_to_encode):
+                    a[x][y][z] = round(a[x][y][z]/10)*10
 
-                a[x][y][z] = round(a[x][y][z]/10) * 10
-                
-                if x*len(a[x])+y < len(audio_array_to_encode)*2:
-                    if ((x*len(a[x])+y) % 2) == 0:
-                        if len(str(audio_array_to_encode[x*len(a[x])+y])) < 5-z:
-                            digit = 0
+                    if a[x][y][z] >= 250:
+                        a[x][y][z] = 250
+
+                    if (x*len(a[x])+y) % 2 == 0:
+                        if len(str(audio_array_to_encode[audio_index])) < 6-z:
+                            a[x][y][z] += 0
                         else:
-                            digit = get_digit(audio_array_to_encode[x*len(a[x])+y], 5-z)
+                            a[x][y][z] += int(str(audio_array_to_encode[audio_index])[-6+z])
 
-                        if a[x][y][z] == 250 and digit > 5:
-                            a[x][y][z] = 240
-
-
-                        colourValue = int(a[x][y][z]) + int(digit)
-
-                        if colourValue >= 256:
-                            colourValue = 255
-
-                        a[x][y][z] = colourValue
-
-
-                    if ((x*len(a[x])+y) % 2) == 1:
-                        if len(str(audio_array_to_encode[x*len(a[x])+y])) < 2-z:
-                            digit = 0
+                    if (x*len(a[x])+y) % 2 == 1:
+                        if len(str(audio_array_to_encode[audio_index])) < 3-z:
+                            a[x][y][z] += 0
                         else:
-                            digit = get_digit(audio_array_to_encode[x*len(a[x])+y], 2-z)
+                            a[x][y][z] += int(str(audio_array_to_encode[audio_index])[-3+z])
 
-                        if a[x][y][z] == 250 and digit > 5:
-                            a[x][y][z] = 240
+                        if z == 2 and (x*len(a[x])+y) % 2 == 1:
+                            audio_index += 1
 
-
-                        colourValue = int(a[x][y][z]) + int(digit)
-
-                        if colourValue >= 256:
-                            colourValue = 255
-
-                        a[x][y][z] = colourValue
+                    if a[x][y][z] > 255:
+                        a[x][y][z] -= 10
 
 
-                """ if x*len(a[x])+y < len(audio_array_to_encode):
-                    digit = get_digit(audio_array_to_encode[x*len(a[x])+y], z)
-
-                    if a[x][y][z] == 250 and digit > 5:
-                        a[x][y][z] = 240
-
-
-                    colourValue = int(a[x][y][z]) + int(digit)
-
-                    if colourValue >= 256:
-                        colourValue = 255
-
-                    a[x][y][z] = colourValue """
-      
         general_progress_bar(x, len(a))
         progressbar_popup.update_idletasks()
-        
+            
     general_progress_bar(1, 1)
     progressbar_popup.update_idletasks()
                 
     progressbar_popup.destroy()
-    #print(len(audioarray))
-
-
+    
 
     im2 = Image.fromarray(a)
-    #im2 . show()
     im2.save(str(f.name), format="png")   
 
 def decode_fn():
@@ -1006,25 +973,23 @@ def decode_fn():
     img_decode = Image.open(base_img_filename)
     
     a = np.asarray(img_decode)
+    audioarray = np.zeros(int(len(a)*len(a[0])/2))
 
-    audioarray = np.zeros(len(a)*len(a[0]))
-
-    
+    audio_index = 0
 
     for x in range(len(a)):
-        print(x)
         for y in range(len(a[x])):
-            #for z in range(len(a[x][y])):
+            if (x*len(a[x])+y) % 2 == 0:
+                audioarray[audio_index] = get_digit(a[x][y][0], 0)*100000 + get_digit(a[x][y][1], 0)*10000 + get_digit(a[x][y][2], 0)*1000
             
-            audioarray[x*len(a[x])+y] = get_digit(a[x][y][0], 0) + get_digit(a[x][y][1], 0)*10 + get_digit(a[x][y][2], 0)*100
-            if int(audioarray[x*len(a[x])+y]) == 0:
-                audioarray[x*len(a[x])+y] += 500
+            elif (x*len(a[x])+y) % 2 == 1:
+                audioarray[audio_index] += get_digit(a[x][y][0], 0)*100 + get_digit(a[x][y][1], 0)*10 + get_digit(a[x][y][2], 0)*1
+                audio_index += 1
+    
+    audio_out = audioarray - ((2**16)/2)
+    add_silence(audio_out)
 
-    audioarray = (audioarray / 999)*(2**16) - ((2**16)/2)
-
-   
-
-    y = np.int16(audioarray)
+    y = np.int16(audio_out)
     song = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
     song.export("decoded audio.mp3", format="mp3", bitrate="48k")
 
@@ -1034,8 +999,6 @@ def encrypt_audio():
     global audio_array_output
 
     pygame.mixer.stop()
-
-
 
     # popup progress bar code #####################################
     global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
@@ -1227,6 +1190,9 @@ def remove_silence():
                 array_of_zeros.append(length)
             start_index = zero_locations[0][x]
             length = 1
+
+        general_progress_bar(x, len(zero_locations[0]))
+        progressbar_popup.update_idletasks()
         
     audio_array_list = audio_array_to_encode.tolist()
 
@@ -1234,26 +1200,30 @@ def remove_silence():
         del audio_array_list[array_of_zeros[y]:(array_of_zeros[y]+(array_of_zeros[y+1]))]
 
 
-    audio_array_list.append(10101)
-    audio_array_list.append(20202)
-    audio_array_list.append(30303)
+    silence_array = []
 
     for z in range(len(array_of_zeros)):
-        audio_array_list.append(math.floor(int(array_of_zeros[z])/(2**16)))
-        audio_array_list.append(array_of_zeros[z] % (2**16))
+        silence_array.append(math.floor(int(array_of_zeros[z])/(2**16)))
+        silence_array.append(array_of_zeros[z] % (2**16))
 
+    silence_array.append(10101)
+    silence_array.append(20202)
+    silence_array.append(30303)
 
+    audio_array_to_encode = silence_array + audio_array_list
 
-    audio_array_to_encode = np.array(audio_array_list)
+    audio_array_to_encode = np.array(audio_array_to_encode)
    
     general_progress_bar(1, 1)
     progressbar_popup.update_idletasks()
-    #progressbar_popup.destroy()
-    #del progressbar_popup
 
     return audio_array_to_encode
 
-
+def add_silence(audio_array):
+    for x in range(len(audio_array)):
+        if audio_array[x] == 10101 and audio_array[x+1] == 20202 and audio_array[x+2] == 30303:
+            silence_array = audio_array[:x]
+            print(silence_array)
 
 
 
