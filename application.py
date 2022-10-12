@@ -22,8 +22,7 @@ import threading
 
 matplotlib.rcParams['agg.path.chunksize'] = 10000
 
-
-pygame.mixer.init(frequency=44100, size=-16, channels=1)
+pygame.mixer.init(frequency=48000, size=-16, channels=2, allowedchanges=0)
 
 root = tk.Tk()
 root.geometry('1500x850')
@@ -46,7 +45,7 @@ base_img_filename = 1
 encoded_img_filename = 1
 audio_filename = 1
 
-audioarray = 1
+audio_array = 1
 audio_array_output = 1
 audio_array_to_encode = 1
 
@@ -72,7 +71,7 @@ def get_digit(number, n):
 class GUI:
     
     def __init__(self, master):
-        global open_audio_file_btn, open_audio_file_btn, open_img_filename, open_audio_filename, open_audio_length, preview_btn, encode_btn, open_audio_length_tab3
+        global open_audio_file_btn, open_audio_file_btn, open_img_filename, open_audio_filename_tab1, open_audio_length_tab1, preview_btn, encode_btn, open_audio_length_tab3
         global baseImgdims, disp_inputimg, inputimgFrame, outputFrame, disp_img2, preview_img_label
 
         global open_audio_filename_tab3, openencodedimgfilename, disp_encodedimg, baseFrameencoded, textBox, playoutputaudiobutton, Exportoutputaudiobutton
@@ -92,11 +91,11 @@ class GUI:
         open_img_filename = tk.Label(tab1,text="None Selected", bd=2, relief="sunken")  
         open_img_filename.place(x=173, y=15)
 
-        open_audio_filename = tk.Label(tab1, text="None Selected", bd=2,  relief="sunken")  
-        open_audio_filename.place(x=173, y=55)
+        open_audio_filename_tab1 = tk.Label(tab1, text="None Selected", bd=2,  relief="sunken")  
+        open_audio_filename_tab1.place(x=173, y=55)
 
-        open_audio_length = tk.Label(tab1, text="00m:00.00s", bd=2, relief="sunken")  
-        open_audio_length.place(x=173, y=75)
+        open_audio_length_tab1 = tk.Label(tab1, text="00m:00.00s", bd=2, relief="sunken")  
+        open_audio_length_tab1.place(x=173, y=75)
 
         preview_btn = tk.Button(tab1, text='Preview', height = 2, command=self.preview_threading_fn)
         preview_btn.place(x=0, y=105, width=150)
@@ -113,9 +112,9 @@ class GUI:
         encoding_options_label = tk.Label(additional_features_frame, text="Encoding Method:", font= ('TkDefaultFont 9 bold underline'))
         encoding_options_label.place(x=0, y=0)
 
-        encoding_options = ("Input audio waveform", "Input audio specffffffffffffffffffftrogram", "Output audio waveform", "Output audio spectrogram")
+        encoding_options = ("16 Bit Mono", "8 Bit Mono", "16 Bit Stereo", "8 Bit Stereo")
         self.encoding_type = StringVar(root)
-        self.encoding_type.set("Input audio waveform")
+        self.encoding_type.set("16 Bit Mono")
         
         encoding_options_menu = tk.OptionMenu(additional_features_frame, self.encoding_type, *encoding_options, command=donothing)
         encoding_options_menu.config(justify="left")
@@ -321,11 +320,14 @@ class GUI:
         return base_img_filename
 
     def open_audio_file_fn(self):
-        global audioarray
+        global audio_array, audioclip
         global base_img_filename, audio_filename
 
         filetypes = (
-            ("Audio files", ("*.mp3", "*.wav")),
+            ("Audio files", ("*.mp3", "*.wav", "*.flac")),
+            ("MP3", "*.mp3"),
+            ("WAV", "*.wav"),
+            ("FLAC", "*.flac"),
             ("All files", "*.*")
         )
 
@@ -340,14 +342,23 @@ class GUI:
 
         audio_filename = "".join(audio_filename)
 
-        open_audio_filename.config(text=audio_filename.split("/"[-1]))
+        open_audio_filename_tab1.config(text=audio_filename.split("/"[-1]))
         open_audio_filename_tab3.config(text=audio_filename.split("/")[-1])
 
-        audioclip = pydub.AudioSegment.from_mp3(audio_filename)
-        audioarray = np.array(audioclip.get_array_of_samples())
+        audioclip = pydub.AudioSegment.from_file(audio_filename)   #, format="wav")
+        audio_array = np.array(audioclip.get_array_of_samples())
+        
+        sample_rate = audioclip.frame_rate
+        number_of_channels = audioclip.channels
 
-        open_audio_length.config(text=f"{math.floor(len(audioarray)/(48000*60))}m:{(len(audioarray) % (48000*60))/48000}s")
-        open_audio_length_tab3.config(text=f"{math.floor(len(audioarray)/(48000*60))}m:{(len(audioarray) % (48000*60))/48000}s")
+        # displays the length of selected audio clip as 00m:00.00s
+        if number_of_channels == 1:
+            open_audio_length_tab1.config(text=f"{math.floor(len(audio_array)/(sample_rate*60))}m:{round((len(audio_array) % (sample_rate*60))/sample_rate, 2)}s")
+            open_audio_length_tab1.config(text=f"{math.floor(len(audio_array)/(sample_rate*60))}m:{round((len(audio_array) % (sample_rate*60))/sample_rate, 2)}s")
+        elif number_of_channels == 2:
+            open_audio_length_tab3.config(text=f"{math.floor((len(audio_array)/2)/(sample_rate*60))}m:{round(((len(audio_array)/2) % (sample_rate*60))/sample_rate, 2)}s")
+            open_audio_length_tab3.config(text=f"{math.floor((len(audio_array)/2)/(sample_rate*60))}m:{round(((len(audio_array)/2) % (sample_rate*60))/sample_rate, 2)}s")
+
 
         self.audio_plot1(self.audio_plot_type.get())
         self.audio_plot2(self.audio_plot2_type.get())
@@ -424,7 +435,7 @@ class GUI:
         return encoded_img_filename
 
     def play_pause_audio(self): 
-        if type(audioarray).__name__ == "int":
+        if type(audio_array).__name__ == "int":
             messagebox.showerror('Program Error', 'Error: No audio file seleted')
             return
 
@@ -434,8 +445,18 @@ class GUI:
         
 
         if pygame.mixer.get_busy() == False: 
-            audioarray_2channels = np.repeat(audioarray.reshape(len(audioarray), 1), 2, axis = 1)
-            audioarray_2channels = audioarray_2channels.astype("int16")
+            if audioclip.channels == 1:
+                audioarray_2channels = np.repeat(audio_array.reshape(len(audio_array), 1), 2, axis = 1)
+                audioarray_2channels = audioarray_2channels.astype("int16")
+
+                print(audioarray_2channels)
+                print(audio_array)
+            elif audioclip.channels == 2:
+                audioarray_2channels = np.vstack((audio_array[::2], audio_array[1::2])).T
+                audioarray_2channels = np.ascontiguousarray(audioarray_2channels, dtype=np.int16)
+
+                print(audioarray_2channels)
+
             audiotoplay = pygame.sndarray.make_sound(audioarray_2channels)
             audiotoplay.play(loops=0)
         elif pygame.mixer.get_busy() == True and self.IsPaused == False:
@@ -491,24 +512,29 @@ class GUI:
             self.audio_plot2(str(self.current_plot2_type))
         
     def audio_plot1(self, format):
-        global audio_array_output
+        #global audio_array_output, audioclip
 
-        if type(audioarray).__name__ == "int":
-            return
+        if format == "Input audio waveform": 
+            if type(audio_array).__name__ == "int":
+                return
+            else:
+                if audioclip.channels == 2:
+                    audio_array_to_plot = audio_array[::2]
+                else:
+                    audio_array_to_plot = audio_array
 
-        elif format == "Input audio waveform": 
             # the figure that will contain the plot
             fig = Figure(figsize = (12, 3), dpi = 100)
 
             fig.clear()
 
             
-            Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
+            Time = np.linspace(0, len(audio_array_to_plot) / 48000, num=len(audio_array_to_plot))
 
             # plotting the graph
             plot1 = fig.add_subplot(111)
 
-            audioplt = plot1.plot(Time, audioarray)
+            audioplt = plot1.plot(Time, audio_array_to_plot)
 
             # creating the Tkinter canvas
             # containing the Matplotlib figure
@@ -526,17 +552,25 @@ class GUI:
             toolbar.place(x=173, y = 355) 
 
         elif format == "Input audio spectrogram":
+            if type(audio_array).__name__ == "int":
+                return
+            else:
+                if audioclip.channels == 2:
+                    audio_array_to_plot = audio_array[::2]
+                else:
+                    audio_array_to_plot = audio_array
+
             fig = Figure(figsize = (12, 3), dpi = 100)
 
             fig.clear()
 
             
-            Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
+            Time = np.linspace(0, len(audio_array_to_plot) / 48000, num=len(audio_array_to_plot))
 
             # plotting the graph
             plot1 = fig.add_subplot(111)
 
-            audioplt = plot1.specgram(audioarray, Fs=48000)
+            audioplt = plot1.specgram(audio_array_to_plot, Fs=48000)
 
             # creating the Tkinter canvas
             # containing the Matplotlib figure
@@ -556,6 +590,11 @@ class GUI:
         elif format == "Output audio waveform":
             if type(audio_array_output).__name__ == "int":
                 return
+            else:
+                if audioclip.channels == 2:
+                    audio_array_output_to_plot = audio_array_output[::2]
+                else:
+                    audio_array_output_to_plot = audio_array_output
 
             # the figure that will contain the plot
             fig = Figure(figsize = (12, 3), dpi = 100)
@@ -563,12 +602,12 @@ class GUI:
             fig.clear()
 
             
-            Time = np.linspace(0, len(audio_array_output) / 48000, num=len(audio_array_output))
+            Time = np.linspace(0, len(audio_array_output_to_plot) / 48000, num=len(audio_array_output_to_plot))
 
             # plotting the graph
             plot1 = fig.add_subplot(111)
 
-            audioplt = plot1.plot(Time, audio_array_output)
+            audioplt = plot1.plot(Time, audio_array_output_to_plot)
 
             # creating the Tkinter canvas
             # containing the Matplotlib figure
@@ -588,18 +627,23 @@ class GUI:
         elif format == "Output audio spectrogram":
             if type(audio_array_output).__name__ == "int":
                 return
+            else:
+                if audioclip.channels == 2:
+                    audio_array_output_to_plot = audio_array_output[::2]
+                else:
+                    audio_array_output_to_plot = audio_array_output
 
             fig = Figure(figsize = (12, 3), dpi = 100)
 
             fig.clear()
 
             
-            Time = np.linspace(0, len(audio_array_output) / 48000, num=len(audio_array_output))
+            Time = np.linspace(0, len(audio_array_output_to_plot) / 48000, num=len(audio_array_output_to_plot))
 
             # plotting the graph
             plot1 = fig.add_subplot(111)
 
-            audioplt = plot1.specgram(audio_array_output, Fs=48000)
+            audioplt = plot1.specgram(audio_array_output_to_plot, Fs=48000)
 
             # creating the Tkinter canvas
             # containing the Matplotlib figure
@@ -615,25 +659,31 @@ class GUI:
 
             # placing the toolbar on the Tkinter window
             toolbar.place(x=173, y = 355) 
-        
+
     def audio_plot2(self, format):
-        global audio_array_output
+        #global audio_array_output, audioclip
 
         if format == "Input audio waveform": 
-            if type(audioarray).__name__ == "int":
+            if type(audio_array).__name__ == "int":
                 return
+            else:
+                if audioclip.channels == 2:
+                    audio_array_to_plot = audio_array[::2]
+                else:
+                    audio_array_to_plot = audio_array
+
             # the figure that will contain the plot
             fig2 = Figure(figsize = (12, 3), dpi = 100)
 
             fig2.clear()
 
             
-            Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
+            Time = np.linspace(0, len(audio_array_to_plot) / 48000, num=len(audio_array_to_plot))
 
             # plotting the graph
             plot2 = fig2.add_subplot(111)
 
-            audioplt = plot2.plot(Time, audioarray)
+            audioplt = plot2.plot(Time, audio_array_to_plot)
 
             # creating the Tkinter canvas
             # containing the Matplotlib figure
@@ -651,20 +701,25 @@ class GUI:
             toolbar.place(x=173, y = 735) 
 
         elif format == "Input audio spectrogram":
-            if type(audioarray).__name__ == "int":
+            if type(audio_array).__name__ == "int":
                 return
+            else:
+                if audioclip.channels == 2:
+                    audio_array_to_plot = audio_array[::2]
+                else:
+                    audio_array_to_plot = audio_array
 
             fig = Figure(figsize = (12, 3), dpi = 100)
 
             fig.clear()
 
             
-            Time = np.linspace(0, len(audioarray) / 48000, num=len(audioarray))
+            Time = np.linspace(0, len(audio_array_to_plot) / 48000, num=len(audio_array_to_plot))
 
             # plotting the graph
             plot1 = fig.add_subplot(111)
 
-            audioplt = plot1.specgram(audioarray, Fs=48000)
+            audioplt = plot1.specgram(audio_array_to_plot, Fs=48000)
 
             # creating the Tkinter canvas
             # containing the Matplotlib figure
@@ -684,6 +739,11 @@ class GUI:
         elif format == "Output audio waveform": 
             if type(audio_array_output).__name__ == "int":
                 return
+            else:
+                if audioclip.channels == 2:
+                    audio_array_output_to_plot = audio_array_output[::2]
+                else:
+                    audio_array_output_to_plot = audio_array_output
 
             # the figure that will contain the plot
             fig = Figure(figsize = (12, 3), dpi = 100)
@@ -691,12 +751,12 @@ class GUI:
             fig.clear()
 
             
-            Time = np.linspace(0, len(audio_array_output) / 48000, num=len(audio_array_output))
+            Time = np.linspace(0, len(audio_array_output_to_plot) / 48000, num=len(audio_array_output_to_plot))
 
             # plotting the graph
             plot1 = fig.add_subplot(111)
 
-            audioplt = plot1.plot(Time, audio_array_output)
+            audioplt = plot1.plot(Time, audio_array_output_to_plot)
 
             # creating the Tkinter canvas
             # containing the Matplotlib figure
@@ -716,18 +776,23 @@ class GUI:
         elif format == "Output audio spectrogram":
             if type(audio_array_output).__name__ == "int":
                 return
+            else:
+                if audioclip.channels == 2:
+                    audio_array_output_to_plot = audio_array_output[::2]
+                else:
+                    audio_array_output_to_plot = audio_array_output
 
             fig = Figure(figsize = (12, 3), dpi = 100)
 
             fig.clear()
 
             
-            Time = np.linspace(0, len(audio_array_output) / 48000, num=len(audio_array_output))
+            Time = np.linspace(0, len(audio_array_output_to_plot) / 48000, num=len(audio_array_output_to_plot))
 
             # plotting the graph
             plot1 = fig.add_subplot(111)
 
-            audioplt = plot1.specgram(audio_array_output, Fs=48000)
+            audioplt = plot1.specgram(audio_array_output_to_plot, Fs=48000)
 
             # creating the Tkinter canvas
             # containing the Matplotlib figure
@@ -877,17 +942,36 @@ def preview_fn():
     progressbar_popup.destroy()
 
 def encode_fn():
-    global audioarray, audio_array_to_encode
+    global audio_array_to_encode
     global base_img_filename, audio_filename
 
-    f = fd.asksaveasfile(mode='w', defaultextension=".png")
 
-    if f == "":
+    # image file to save to
+    filetypes = (
+        ("Image files", ("*.jpg", "*.png")),
+        ("All files", "*.*")
+        )
+
+    
+    img_save_name = base_img_filename.split("/")[-1].split(".")[0]
+
+    f = fd.asksaveasfile(mode='w', filetypes = filetypes, defaultextension = filetypes, initialfile=f"{img_save_name} encoded")
+
+    if f == "" or f == None:
         return
 
     im = Image.open(base_img_filename)
-    
-    a = np.array(im)
+    image_array = np.array(im)
+
+
+    # get audio as array
+    if gui_class.encoding_type == "16 Bit Stereo" or gui_class.encoding_type == "8 Bit Stereo":
+        audioclip = pydub.AudioSegment.from_file(audio_filename, format="wav", channels=2)
+        audio_array_to_encode = np.array(audioclip.get_array_of_samples())
+    elif gui_class.encoding_type == "16 Bit Mono" or gui_class.encoding_type == "8 Bit Mono":
+        audioclip = pydub.AudioSegment.from_file(audio_filename, format="wav", channels=1)
+        audio_array_to_encode = np.array(audioclip.get_array_of_samples())
+
 
     # popup progress bar code #####################################
     global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
@@ -906,57 +990,56 @@ def encode_fn():
     
     ##############################################################
 
-    audio_array_to_encode = audioarray
-    
+    # removes silence from audio
     if remove_silence_check.get() == 1:
-        remove_silence()
+        audio_array_to_encode = remove_silence(audio_array_to_encode)
         progressbar_label.config(text="Audio is being encoded")
         progressbar_popup.update_idletasks()
-        print("done")
         
+    # encrypts audio with key
     if encrypt_check.get() == 1:
-        encrypt_audio()
-        #audioarray_to_encode = audio_array_output
+        audio_array_to_encode = encrypt_audio(audio_array_to_encode)
         progressbar_label.config(text="Audio is being encoded")
         progressbar_popup.update_idletasks()
 
     elif encrypt_check.get() == 0:
-        #audioarray_to_encode = audioarray
         pass
+
+        
 
     audio_index = 0
     audio_array_to_encode = audio_array_to_encode + ((2**16)/2)
     audio_array_to_encode = audio_array_to_encode.astype(int)
     
-    for x in range(len(a)):
-        for y in range(len(a[x])):
-            for z in range(len(a[x][y])):
+    for x in range(len(image_array)):
+        for y in range(len(image_array[x])):
+            for z in range(len(image_array[x][y])):
                 if audio_index < len(audio_array_to_encode):
-                    a[x][y][z] = round(a[x][y][z]/10)*10
+                    image_array[x][y][z] = round(image_array[x][y][z]/10)*10
 
-                    if a[x][y][z] >= 250:
-                        a[x][y][z] = 250
+                    if image_array[x][y][z] >= 250:
+                        image_array[x][y][z] = 250
 
-                    if (x*len(a[x])+y) % 2 == 0:
+                    if (x*len(image_array[x])+y) % 2 == 0:
                         if len(str(audio_array_to_encode[audio_index])) < 6-z:
-                            a[x][y][z] += 0
+                            image_array[x][y][z] += 0
                         else:
-                            a[x][y][z] += int(str(audio_array_to_encode[audio_index])[-6+z])
+                            image_array[x][y][z] += int(str(audio_array_to_encode[audio_index])[-6+z])
 
-                    if (x*len(a[x])+y) % 2 == 1:
+                    if (x*len(image_array[x])+y) % 2 == 1:
                         if len(str(audio_array_to_encode[audio_index])) < 3-z:
-                            a[x][y][z] += 0
+                            image_array[x][y][z] += 0
                         else:
-                            a[x][y][z] += int(str(audio_array_to_encode[audio_index])[-3+z])
+                            image_array[x][y][z] += int(str(audio_array_to_encode[audio_index])[-3+z])
 
-                        if z == 2 and (x*len(a[x])+y) % 2 == 1:
+                        if z == 2 and (x*len(image_array[x])+y) % 2 == 1:
                             audio_index += 1
 
-                    if a[x][y][z] > 255:
-                        a[x][y][z] -= 10
+                    if image_array[x][y][z] > 255:
+                        image_array[x][y][z] -= 10
 
 
-        general_progress_bar(x, len(a))
+        general_progress_bar(x, len(image_array))
         progressbar_popup.update_idletasks()
             
     general_progress_bar(1, 1)
@@ -965,7 +1048,7 @@ def encode_fn():
     progressbar_popup.destroy()
     
 
-    im2 = Image.fromarray(a)
+    im2 = Image.fromarray(image_array)
     im2.save(str(f.name), format="png")   
 
 def decode_fn():
@@ -987,15 +1070,16 @@ def decode_fn():
                 audio_index += 1
     
     audio_out = audioarray - ((2**16)/2)
-    add_silence(audio_out)
+
+    audio_out = decrypt_audio(audio_out)
+
+    audio_out = add_silence(audio_out)
 
     y = np.int16(audio_out)
     song = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
     song.export("decoded audio.mp3", format="mp3", bitrate="48k")
 
-def encrypt_audio():
-    #start = perf_counter()
-    global audio_array_to_encode
+def encrypt_audio(audio_array_to_encode):
     global audio_array_output
 
     pygame.mixer.stop()
@@ -1079,9 +1163,7 @@ def encrypt_audio():
     audio_array_to_encode = audio_array_output
     return audio_array_to_encode
 
-def decrypt_audio():
-    #start = perf_counter()
-    global audioarray
+def decrypt_audio(audio_array_to_decode):
     global audio_array_output
 
 
@@ -1120,24 +1202,12 @@ def decrypt_audio():
         if x > 0:
             if x % percentofaudio == 0: 
                 pass
-                
 
-
-    
-
-    #duration = perf_counter() - start
-    #print('{} took {:.3f} seconds\n\n'.format("c++", duration))
-
-    if "audioarrayoutput" in globals():
-        playoutputaudiobutton.config(state="normal")
-        Exportoutputaudiobutton.config(state="normal")
 
     gui_class.audio_plot2()
     return audio_array_output
 
-def remove_silence():
-    global audio_array_to_encode
-
+def remove_silence(audio_array_to_encode):
 
     # popup progress bar code #####################################
     global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
@@ -1219,10 +1289,10 @@ def remove_silence():
 
     return audio_array_to_encode
 
-def add_silence(audio_array):
-    for x in range(len(audio_array)):
-        if audio_array[x] == 10101 and audio_array[x+1] == 20202 and audio_array[x+2] == 30303:
-            silence_array = audio_array[:x]
+def add_silence(audio_array_to_decode):
+    for x in range(len(audio_array_to_decode)):
+        if audio_array_to_decode[x] == 10101 and audio_array_to_decode[x+1] == 20202 and audio_array_to_decode[x+2] == 30303:
+            silence_array = audio_array_to_decode[:x]
             print(silence_array)
 
 
