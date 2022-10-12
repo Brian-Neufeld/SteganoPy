@@ -5,6 +5,6 @@ This program can also encode the data with a basic Feistel cipher.
 
 Currently supported data types are:
 
-audio- mp3, wav, flac
+audio - mp3, wav, flac
 
-images-jpg, png
+images - jpg, png
