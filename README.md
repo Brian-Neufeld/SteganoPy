@@ -1,7 +1,7 @@
 # SteganoPy
 A python program for hiding audio in images. 
 
-This program can also encode the data with a basic Feistel cipher. 
+This program can also encrypt the data with a basic Feistel cipher. 
 
 Currently supported data types are:
 
