@@ -354,9 +354,9 @@ class GUI:
         # displays the length of selected audio clip as 00m:00.00s
         if number_of_channels == 1:
             open_audio_length_tab1.config(text=f"{math.floor(len(audio_array)/(sample_rate*60))}m:{round((len(audio_array) % (sample_rate*60))/sample_rate, 2)}s")
-            open_audio_length_tab1.config(text=f"{math.floor(len(audio_array)/(sample_rate*60))}m:{round((len(audio_array) % (sample_rate*60))/sample_rate, 2)}s")
+            open_audio_length_tab3.config(text=f"{math.floor(len(audio_array)/(sample_rate*60))}m:{round((len(audio_array) % (sample_rate*60))/sample_rate, 2)}s")
         elif number_of_channels == 2:
-            open_audio_length_tab3.config(text=f"{math.floor((len(audio_array)/2)/(sample_rate*60))}m:{round(((len(audio_array)/2) % (sample_rate*60))/sample_rate, 2)}s")
+            open_audio_length_tab1.config(text=f"{math.floor((len(audio_array)/2)/(sample_rate*60))}m:{round(((len(audio_array)/2) % (sample_rate*60))/sample_rate, 2)}s")
             open_audio_length_tab3.config(text=f"{math.floor((len(audio_array)/2)/(sample_rate*60))}m:{round(((len(audio_array)/2) % (sample_rate*60))/sample_rate, 2)}s")
 
 
@@ -957,21 +957,26 @@ def encode_fn():
 
     f = fd.asksaveasfile(mode='w', filetypes = filetypes, defaultextension = filetypes, initialfile=f"{img_save_name} encoded")
 
+    print(f)
+    print(f.name)
+    print("")
+
     if f == "" or f == None:
         return
 
     im = Image.open(base_img_filename)
     image_array = np.array(im)
 
-
+    
     # get audio as array
-    if gui_class.encoding_type == "16 Bit Stereo" or gui_class.encoding_type == "8 Bit Stereo":
+    if gui_class.encoding_type.get() == "16 Bit Stereo" or gui_class.encoding_type.get() == "8 Bit Stereo":
         audioclip = pydub.AudioSegment.from_file(audio_filename, format="wav", channels=2)
-        audio_array_to_encode = np.array(audioclip.get_array_of_samples())
-    elif gui_class.encoding_type == "16 Bit Mono" or gui_class.encoding_type == "8 Bit Mono":
+        audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
+    elif gui_class.encoding_type.get() == "16 Bit Mono" or gui_class.encoding_type.get() == "8 Bit Mono":
         audioclip = pydub.AudioSegment.from_file(audio_filename, format="wav", channels=1)
-        audio_array_to_encode = np.array(audioclip.get_array_of_samples())
+        audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
 
+    
 
     # popup progress bar code #####################################
     global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
@@ -1035,7 +1040,7 @@ def encode_fn():
                         if z == 2 and (x*len(image_array[x])+y) % 2 == 1:
                             audio_index += 1
 
-                    if image_array[x][y][z] > 255:
+                    if image_array[x][y][z] >= 255:
                         image_array[x][y][z] -= 10
 
 
@@ -1044,12 +1049,48 @@ def encode_fn():
             
     general_progress_bar(1, 1)
     progressbar_popup.update_idletasks()
+
+
+
+    img_preview_out = Image.fromarray(image_array)
+    img_preview = ImageTk.PhotoImage(img_preview_out)
+
+    imgwidth = img_preview.width()
+    imgheight = img_preview.height()
+
+    if imgwidth >= 500 and imgheight >= 500:
+        img_preview_out = img_preview_out.crop((0,0,499,499))
+    elif imgwidth < 500 and imgheight >= 500:
+        img_preview_out = img_preview_out.crop((0,0,imgwidth-1,499))
+    elif imgwidth >= 500 and imgheight < 500:
+        img_preview_out = img_preview_out.crop((0,0,499,imgheight-1))
+    if imgwidth < 500 and imgheight < 500:
+        img_preview_out = img_preview_out.crop((0,0,imgwidth-1,imgheight-1))
+        
+    img_preview_out = ImageTk.PhotoImage(img_preview_out)
+
+    if imgwidth < 500:
+        outputFrame.config(width=(imgwidth+8))
+    else:
+        outputFrame.config(width=508)
+    if imgheight < 500:
+        outputFrame.config(height=(imgheight+8))
+    else:
+        outputFrame.config(height=508)
+
+    disp_img2.config(image=img_preview_out)
+    disp_img2.image = img_preview_out
+
+    if imgheight > 500:
+        imgheight = 500
                 
+
+
     progressbar_popup.destroy()
     
 
     im2 = Image.fromarray(image_array)
-    im2.save(str(f.name), format="png")   
+    im2.save(str(f.name)) #, format="png")   
 
 def decode_fn():
     global base_img_filename
