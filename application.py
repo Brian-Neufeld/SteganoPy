@@ -116,7 +116,7 @@ class GUI:
         self.encoding_type = StringVar(root)
         self.encoding_type.set("16 Bit Mono")
         
-        encoding_options_menu = tk.OptionMenu(additional_features_frame, self.encoding_type, *encoding_options, command=donothing)
+        encoding_options_menu = tk.OptionMenu(additional_features_frame, self.encoding_type, *encoding_options)
         encoding_options_menu.config(justify="left")
         encoding_options_menu.place(x=0, y=20, width=160, height=25)
 
@@ -809,7 +809,8 @@ class GUI:
             # placing the toolbar on the Tkinter window
             toolbar.place(x=173, y = 735) 
         
-
+    def donothing():
+        pass
 
 def preview_fn():
     global audioarray
@@ -948,7 +949,7 @@ def encode_fn():
 
     # image file to save to
     filetypes = (
-        ("Image files", ("*.jpg", "*.png")),
+        ("PNG", "*.png"),
         ("All files", "*.*")
         )
 
@@ -964,17 +965,43 @@ def encode_fn():
     if f == "" or f == None:
         return
 
-    im = Image.open(base_img_filename)
-    image_array = np.array(im)
+    
+    im_open = Image.open(base_img_filename)
+
+    if len(np.asarray(im_open)[0][0]) == 3:
+        image_array = np.array(im_open)
+
+    elif len(np.asarray(im_open)[0][0]) == 4:
+        im_open.load()
+        im = Image.new("RGB", im_open.size, (255, 255, 255))
+        im.paste(im_open, mask=im_open.split()[3])
+        image_array = np.array(im)
+    
 
     
     # get audio as array
+    audioclip = pydub.AudioSegment.from_file(audio_filename)
+    #audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
+
     if gui_class.encoding_type.get() == "16 Bit Stereo" or gui_class.encoding_type.get() == "8 Bit Stereo":
-        audioclip = pydub.AudioSegment.from_file(audio_filename, format="wav", channels=2)
+        if audioclip.channels == 2:
+            pass
+        else:
+            audioclip = audioclip.set_channels(2)
         audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
+
     elif gui_class.encoding_type.get() == "16 Bit Mono" or gui_class.encoding_type.get() == "8 Bit Mono":
-        audioclip = pydub.AudioSegment.from_file(audio_filename, format="wav", channels=1)
+        if audioclip.channels == 1:
+            pass
+        else:
+            audioclip = audioclip.set_channels(1)
+
         audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
+
+
+
+    print(len(audio_array_to_encode))
+    print(audioclip.channels)
 
     
 
@@ -1011,45 +1038,74 @@ def encode_fn():
         pass
 
         
-
     audio_index = 0
     audio_array_to_encode = audio_array_to_encode + ((2**16)/2)
     audio_array_to_encode = audio_array_to_encode.astype(int)
+
+    start_digit = 0
+
+    if gui_class.encoding_type.get() == "16 Bit Stereo": 
+        start_digit += 100
+    elif gui_class.encoding_type.get() == "8 Bit Stereo":
+        start_digit += 200
+    elif gui_class.encoding_type.get() == "16 Bit Mono": 
+        start_digit += 300
+    elif gui_class.encoding_type.get() == "8 Bit Mono":
+        start_digit += 400
+
+    if remove_silence_check.get() == 1:
+        start_digit += 10
     
-    for x in range(len(image_array)):
-        for y in range(len(image_array[x])):
-            for z in range(len(image_array[x][y])):
-                if audio_index < len(audio_array_to_encode):
-                    image_array[x][y][z] = round(image_array[x][y][z]/10)*10
+    if encrypt_check.get() == 1:
+        start_digit += 1
+        
+    audio_array_to_encode = np.insert(audio_array_to_encode, 0, int(start_digit))
+    
+    print(audio_array_to_encode)
+    
+    
+    if "16 Bit" in gui_class.encoding_type.get():
+        for x in range(len(image_array)):
+            for y in range(len(image_array[x])):
+                for z in range(len(image_array[x][y])):
+                    if audio_index < len(audio_array_to_encode):
+                        if image_array[x][y][z] >= 250:
+                            image_array[x][y][z] = 250
 
-                    if image_array[x][y][z] >= 250:
-                        image_array[x][y][z] = 250
+                        image_array[x][y][z] = round(image_array[x][y][z]/10)*10
 
-                    if (x*len(image_array[x])+y) % 2 == 0:
-                        if len(str(audio_array_to_encode[audio_index])) < 6-z:
-                            image_array[x][y][z] += 0
-                        else:
-                            image_array[x][y][z] += int(str(audio_array_to_encode[audio_index])[-6+z])
+                        if (x*len(image_array[x])+y) % 2 == 0:
+                            if len(str(audio_array_to_encode[audio_index])) < 6-z:
+                                image_array[x][y][z] += 0
+                            else:
+                                if int(str(audio_array_to_encode[audio_index])[-6+z]) > 5 and image_array[x][y][z] == 250:
+                                    image_array[x][y][z] -= 10
+                                    
+                                image_array[x][y][z] += int(str(audio_array_to_encode[audio_index])[-6+z])
 
-                    if (x*len(image_array[x])+y) % 2 == 1:
-                        if len(str(audio_array_to_encode[audio_index])) < 3-z:
-                            image_array[x][y][z] += 0
-                        else:
-                            image_array[x][y][z] += int(str(audio_array_to_encode[audio_index])[-3+z])
+                        if (x*len(image_array[x])+y) % 2 == 1:
+                            if len(str(audio_array_to_encode[audio_index])) < 3-z:
+                                image_array[x][y][z] += 0
+                            else:
+                                if int(str(audio_array_to_encode[audio_index])[-3+z]) > 5 and image_array[x][y][z] == 250:
+                                    image_array[x][y][z] -= 10
 
-                        if z == 2 and (x*len(image_array[x])+y) % 2 == 1:
-                            audio_index += 1
+                                image_array[x][y][z] += int(str(audio_array_to_encode[audio_index])[-3+z])
 
-                    if image_array[x][y][z] >= 255:
-                        image_array[x][y][z] -= 10
-
-
-        general_progress_bar(x, len(image_array))
-        progressbar_popup.update_idletasks()
+                            if z == 2 and (x*len(image_array[x])+y) % 2 == 1:
+                                audio_index += 1
+                            
+            general_progress_bar(x, len(image_array))
+            progressbar_popup.update_idletasks()
             
+    if "8 Bit" in gui_class.encoding_type.get():
+        pass
+
+
+
+
     general_progress_bar(1, 1)
     progressbar_popup.update_idletasks()
-
 
 
     img_preview_out = Image.fromarray(image_array)
@@ -1083,14 +1139,12 @@ def encode_fn():
 
     if imgheight > 500:
         imgheight = 500
-                
-
 
     progressbar_popup.destroy()
-    
 
     im2 = Image.fromarray(image_array)
-    im2.save(str(f.name)) #, format="png")   
+    im2.save(str(f.name))
+    im2.close()
 
 def decode_fn():
     global base_img_filename
@@ -1348,8 +1402,7 @@ def update_general_pb():
     return f"Current Progress: {round(general_progress_bar1['value'],1)}%"
 
 
-def donothing():
-    pass
+
 
 
 
