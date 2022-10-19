@@ -256,10 +256,7 @@ class GUI:
         plot2_menu = tk.OptionMenu(tab3, self.audio_plot2_type, *plot2_options, command=self.change_plot2)
         plot2_menu.place(x=173, y=775)
 
-
     def open_img_file_fn(self):
-
-        global audioarray
         global base_img_filename, audio_filename
         
         filetypes = (
@@ -958,52 +955,9 @@ def encode_fn():
 
     f = fd.asksaveasfile(mode='w', filetypes = filetypes, defaultextension = filetypes, initialfile=f"{img_save_name} encoded")
 
-    print(f)
-    print(f.name)
-    print("")
-
+    # cancel encoding if the user doesn't select a file to save to 
     if f == "" or f == None:
         return
-
-    
-    im_open = Image.open(base_img_filename)
-
-    if len(np.asarray(im_open)[0][0]) == 3:
-        image_array = np.array(im_open)
-
-    elif len(np.asarray(im_open)[0][0]) == 4:
-        im_open.load()
-        im = Image.new("RGB", im_open.size, (255, 255, 255))
-        im.paste(im_open, mask=im_open.split()[3])
-        image_array = np.array(im)
-    
-
-    
-    # get audio as array
-    audioclip = pydub.AudioSegment.from_file(audio_filename)
-    #audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
-
-    if gui_class.encoding_type.get() == "16 Bit Stereo" or gui_class.encoding_type.get() == "8 Bit Stereo":
-        if audioclip.channels == 2:
-            pass
-        else:
-            audioclip = audioclip.set_channels(2)
-        audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
-
-    elif gui_class.encoding_type.get() == "16 Bit Mono" or gui_class.encoding_type.get() == "8 Bit Mono":
-        if audioclip.channels == 1:
-            pass
-        else:
-            audioclip = audioclip.set_channels(1)
-
-        audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
-
-
-
-    print(len(audio_array_to_encode))
-    print(audioclip.channels)
-
-    
 
     # popup progress bar code #####################################
     global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
@@ -1022,6 +976,37 @@ def encode_fn():
     
     ##############################################################
 
+    # opens image to array
+    im_open = Image.open(base_img_filename)
+
+    if len(np.asarray(im_open)[0][0]) == 3:
+        image_array = np.array(im_open)
+
+    elif len(np.asarray(im_open)[0][0]) == 4:
+        im_open.load()
+        im = Image.new("RGB", im_open.size, (255, 255, 255))
+        im.paste(im_open, mask=im_open.split()[3])
+        image_array = np.array(im)
+    
+    # opens audio as array
+    audioclip = pydub.AudioSegment.from_file(audio_filename)
+    
+    if gui_class.encoding_type.get() == "16 Bit Stereo" or gui_class.encoding_type.get() == "8 Bit Stereo":
+        if audioclip.channels == 2:
+            pass
+        else:
+            audioclip = audioclip.set_channels(2)
+        audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
+
+    elif gui_class.encoding_type.get() == "16 Bit Mono" or gui_class.encoding_type.get() == "8 Bit Mono":
+        if audioclip.channels == 1:
+            pass
+        else:
+            audioclip = audioclip.set_channels(1)
+        audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
+
+
+
     # removes silence from audio
     if remove_silence_check.get() == 1:
         audio_array_to_encode = remove_silence(audio_array_to_encode)
@@ -1034,18 +1019,11 @@ def encode_fn():
         progressbar_label.config(text="Audio is being encoded")
         progressbar_popup.update_idletasks()
 
-    elif encrypt_check.get() == 0:
-        pass
 
-        
-    audio_index = 0
-    audio_array_to_encode = audio_array_to_encode + ((2**16)/2)
-    audio_array_to_encode = audio_array_to_encode.astype(int)
-
+    # inserts digit at the start of the audio array to inform program of how it has been encoded
     start_digit = 0
-
     if gui_class.encoding_type.get() == "16 Bit Stereo": 
-        start_digit += 100
+        start_digit = 100
     elif gui_class.encoding_type.get() == "8 Bit Stereo":
         start_digit += 200
     elif gui_class.encoding_type.get() == "16 Bit Mono": 
@@ -1058,12 +1036,27 @@ def encode_fn():
     
     if encrypt_check.get() == 1:
         start_digit += 1
+
+    print(start_digit)
+
+    
         
-    audio_array_to_encode = np.insert(audio_array_to_encode, 0, int(start_digit))
+    audio_array_to_encode = np.insert(audio_array_to_encode, 0, start_digit)
+
+    audio_array_to_encode = audio_array_to_encode + ((2**16)/2)
+    audio_array_to_encode = audio_array_to_encode.astype(dtype=np.uint16)
     
+
+    if len(audio_array_to_encode)*2 > (len(image_array) * len(image_array[0]) * 3):
+        if messagebox.askyesno('Program Warning', 'Warning: Audio is too large for image and will be cropped. Do you want to continue?') == False:
+            progressbar_popup.destroy()
+            return
+        
     print(audio_array_to_encode)
-    
-    
+
+    # For 16 bit audio, the digits of each audio sample are split and divided across 2 pixels 
+    # with the last digit of each colour being a digit from the audio
+    audio_index = 0
     if "16 Bit" in gui_class.encoding_type.get():
         for x in range(len(image_array)):
             for y in range(len(image_array[x])):
@@ -1098,6 +1091,8 @@ def encode_fn():
             general_progress_bar(x, len(image_array))
             progressbar_popup.update_idletasks()
             
+    # For 8 bit audio, the digits of each audio sample are split and divided across the colours of 1 pixel
+    # The last digit of each colour is a digit from the audio
     if "8 Bit" in gui_class.encoding_type.get():
         pass
 
@@ -1107,7 +1102,7 @@ def encode_fn():
     general_progress_bar(1, 1)
     progressbar_popup.update_idletasks()
 
-
+    # After encoding, a preview image is generated and then closed so that the output file can be overwritten 
     img_preview_out = Image.fromarray(image_array)
     img_preview = ImageTk.PhotoImage(img_preview_out)
 
@@ -1148,31 +1143,44 @@ def encode_fn():
 
 def decode_fn():
     global base_img_filename
-    img_decode = Image.open(base_img_filename)
+    img_decode = Image.open(r"e:\Programming\Projects\audio_image_encoding\IMG_6091small encoded.png")
     
     a = np.asarray(img_decode)
     audioarray = np.zeros(int(len(a)*len(a[0])/2))
+    
 
     audio_index = 0
 
     for x in range(len(a)):
         for y in range(len(a[x])):
+            
             if (x*len(a[x])+y) % 2 == 0:
                 audioarray[audio_index] = get_digit(a[x][y][0], 0)*100000 + get_digit(a[x][y][1], 0)*10000 + get_digit(a[x][y][2], 0)*1000
             
             elif (x*len(a[x])+y) % 2 == 1:
                 audioarray[audio_index] += get_digit(a[x][y][0], 0)*100 + get_digit(a[x][y][1], 0)*10 + get_digit(a[x][y][2], 0)*1
                 audio_index += 1
+
+    print(audioarray)
     
     audio_out = audioarray - ((2**16)/2)
 
-    audio_out = decrypt_audio(audio_out)
+    start_digit = audio_out[0]
 
-    audio_out = add_silence(audio_out)
+    audio_array = audio_out[1:]
 
-    y = np.int16(audio_out)
+    print(audio_array)
+
+    if str(start_digit)[-1] == 1:
+        audio_array = decrypt_audio(audio_array)
+
+    if str(start_digit)[-2] == 1:
+        audio_array = add_silence(audio_array)
+
+    y = np.int16(audio_array)
     song = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
-    song.export("decoded audio.mp3", format="mp3", bitrate="48k")
+    song.export("decoded audio.wav", format="wav", bitrate="48k")
+    print("done")
 
 def encrypt_audio(audio_array_to_encode):
     global audio_array_output
@@ -1242,16 +1250,10 @@ def encrypt_audio(audio_array_to_encode):
     general_progress_bar(1, 1)
     progressbar_popup.update_idletasks()
 
-
-    #print(audioarray)
-
     
     #duration = perf_counter() - start
-    #print('{} took {:.3f} seconds\n\n'.format("c++", duration))
+    #print('{} took {:.3f} seconds\n\n'.format("c++", duration)) 
     
-        
-    #progressbar_popup.destroy()
-    #del progressbar_popup
     gui_class.audio_plot2(str(gui_class.current_plot2_type))
     gui_class.audio_plot1(str(gui_class.current_plot_type))
 
@@ -1391,8 +1393,6 @@ def add_silence(audio_array_to_decode):
             print(silence_array)
 
 
-
-
 def general_progress_bar(increment, total):
     general_progress_bar1["value"] = increment/total * 100
     general_pb_label["text"] = update_general_pb()
@@ -1400,9 +1400,6 @@ def general_progress_bar(increment, total):
 
 def update_general_pb():
     return f"Current Progress: {round(general_progress_bar1['value'],1)}%"
-
-
-
 
 
 
