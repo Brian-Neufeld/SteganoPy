@@ -257,7 +257,9 @@ class GUI:
         plot2_menu.place(x=173, y=775)
 
     def open_img_file_fn(self):
-        global base_img_filename, audio_filename
+        global base_img_filename
+
+        base_img_filename_old = base_img_filename
         
         filetypes = (
         ("Image files", ("*.jpg", "*.png")),
@@ -271,6 +273,7 @@ class GUI:
         )
 
         if base_img_filename == "":
+            base_img_filename = base_img_filename_old
             return
 
         base_img_filename = "".join(base_img_filename)
@@ -278,12 +281,13 @@ class GUI:
         img = Image.open(base_img_filename)
         img1 = ImageTk.PhotoImage(img)
 
+        print(base_img_filename.split("/")[-1])
+
         open_img_filename.config(text=base_img_filename.split("/")[-1])
 
         base_img_width = img1.width()
         base_img_height = img1.height()
 
-        
 
         if base_img_width > base_img_height:
             base_w_scale = 1
@@ -295,8 +299,6 @@ class GUI:
             base_w_scale = 1
             base_h_scale = 1
         
-        #print(base_w_scale)
-        #print(base_h_scale)
 
         w = int(500 * base_w_scale)
         h = int(500 * base_h_scale)
@@ -313,12 +315,14 @@ class GUI:
         
         self.audio_plot1(str(self.audio_plot_type.get()))
 
-        #print(base_img_filename)
+        
         return base_img_filename
 
     def open_audio_file_fn(self):
         global audio_array, audioclip
-        global base_img_filename, audio_filename
+        global audio_filename
+
+        audio_filename_old = audio_filename
 
         filetypes = (
             ("Audio files", ("*.mp3", "*.wav", "*.flac")),
@@ -335,11 +339,12 @@ class GUI:
         )
 
         if audio_filename == "":
+            audio_filename = audio_filename_old
             return
 
         audio_filename = "".join(audio_filename)
 
-        open_audio_filename_tab1.config(text=audio_filename.split("/"[-1]))
+        open_audio_filename_tab1.config(text=audio_filename.split("/")[-1])
         open_audio_filename_tab3.config(text=audio_filename.split("/")[-1])
 
         audioclip = pydub.AudioSegment.from_file(audio_filename)   #, format="wav")
@@ -940,7 +945,6 @@ def preview_fn():
     progressbar_popup.destroy()
 
 def encode_fn():
-    global audio_array_to_encode
     global base_img_filename, audio_filename
 
 
@@ -1005,7 +1009,7 @@ def encode_fn():
             audioclip = audioclip.set_channels(1)
         audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
 
-
+    print(audio_array_to_encode)
 
     # removes silence from audio
     if remove_silence_check.get() == 1:
@@ -1036,10 +1040,6 @@ def encode_fn():
     
     if encrypt_check.get() == 1:
         start_digit += 1
-
-    print(start_digit)
-
-    
         
     audio_array_to_encode = np.insert(audio_array_to_encode, 0, start_digit)
 
@@ -1052,7 +1052,7 @@ def encode_fn():
             progressbar_popup.destroy()
             return
         
-    print(audio_array_to_encode)
+    print(audio_array_to_encode[1:round((len(image_array)*len(image_array[0]))/2)])
 
     # For 16 bit audio, the digits of each audio sample are split and divided across 2 pixels 
     # with the last digit of each colour being a digit from the audio
@@ -1143,7 +1143,7 @@ def encode_fn():
 
 def decode_fn():
     global base_img_filename
-    img_decode = Image.open(r"e:\Programming\Projects\audio_image_encoding\IMG_6091small encoded.png")
+    img_decode = Image.open(r"e:\Programming\Projects\audio_image_encoding\IMG_6091 encoded.png")
     
     a = np.asarray(img_decode)
     audioarray = np.zeros(int(len(a)*len(a[0])/2))
@@ -1153,7 +1153,6 @@ def decode_fn():
 
     for x in range(len(a)):
         for y in range(len(a[x])):
-            
             if (x*len(a[x])+y) % 2 == 0:
                 audioarray[audio_index] = get_digit(a[x][y][0], 0)*100000 + get_digit(a[x][y][1], 0)*10000 + get_digit(a[x][y][2], 0)*1000
             
@@ -1161,26 +1160,28 @@ def decode_fn():
                 audioarray[audio_index] += get_digit(a[x][y][0], 0)*100 + get_digit(a[x][y][1], 0)*10 + get_digit(a[x][y][2], 0)*1
                 audio_index += 1
 
-    print(audioarray)
+    
     
     audio_out = audioarray - ((2**16)/2)
 
     start_digit = audio_out[0]
 
-    audio_array = audio_out[1:]
+    audioarray = audio_out[1:].astype(dtype=np.int16)
 
-    print(audio_array)
+    if str(int(start_digit))[-1] == "1":
+        audioarray = decrypt_audio(audioarray)
+        
 
-    if str(start_digit)[-1] == 1:
-        audio_array = decrypt_audio(audio_array)
-
-    if str(start_digit)[-2] == 1:
+    if str(int(start_digit))[-2] == "1":
         audio_array = add_silence(audio_array)
 
-    y = np.int16(audio_array)
+
+    y = np.int16(audioarray)
     song = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
     song.export("decoded audio.wav", format="wav", bitrate="48k")
-    print("done")
+
+    progressbar_popup.destroy()
+    
 
 def encrypt_audio(audio_array_to_encode):
     global audio_array_output
@@ -1208,8 +1209,6 @@ def encrypt_audio(audio_array_to_encode):
     progressbar_popup.update_idletasks()
     
     ##############################################################
-    
-
     
     audio_array_output = np.zeros(len(audio_array_to_encode))
     
@@ -1261,15 +1260,32 @@ def encrypt_audio(audio_array_to_encode):
     return audio_array_to_encode
 
 def decrypt_audio(audio_array_to_decode):
-    global audio_array_output
+    pygame.mixer.stop()
+
+    # popup progress bar code #####################################
+    global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
+
+    if "progressbar_popup" in globals():
+        pass
+    else:
+        progressbar_popup = tk.Toplevel(height=100, width=400)
 
 
-    #print("key:")
-    #print(int(textBox.get(),16))
+    progressbar_label = tk.Label(progressbar_popup, text="Audio is being decrypted")
+    progressbar_label.place(x=150, y=25)
     
-    audio_array_output = np.zeros(len(audioarray))
-    
+    general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient="horizontal", length=350, mode='determinate')
+    general_progress_bar1.place(x=25, y=50)
 
+    general_pb_label = ttk.Label(progressbar_popup, text="0%")
+    general_pb_label.place(x=150,y=75)
+
+    progressbar_popup.update_idletasks()
+    
+    ##############################################################
+    
+    audio_array_output = np.zeros(len(audio_array_to_decode))
+    
     percentofaudio = round(len(audio_array_output) * .001) 
 
     key = int(textBox.get(),16)
@@ -1287,21 +1303,28 @@ def decrypt_audio(audio_array_to_decode):
         initializedKey = str(key1)
 
         intkey = int(key1,2)
-    
-    
+    elif key.bit_length() == 64:
+        intkey = key
+    elif key.bit_length() > 64:
+        messagebox.showerror('Program Error', 'Error: Key size is greater than 64 bits')
+        return
     
 
-    for x in range(len(audioarray)):
-        audio_array_output[x] = encryptionmodule.decrypt(intkey, int(audioarray[x]), x)
+    for x in range(len(audio_array_to_decode)):
+        audio_array_output[x] = encryptionmodule.decrypt(intkey, int(audio_array_to_decode[x]), x)
 
-        
-        
         if x > 0:
             if x % percentofaudio == 0: 
-                pass
+                general_progress_bar(x, len(audio_array_to_decode))
+                progressbar_popup.update_idletasks()
 
 
-    gui_class.audio_plot2()
+    general_progress_bar(1, 1)
+    progressbar_popup.update_idletasks()
+
+    #gui_class.audio_plot2(str(gui_class.current_plot2_type))
+    #gui_class.audio_plot1(str(gui_class.current_plot_type))
+    
     return audio_array_output
 
 def remove_silence(audio_array_to_encode):
