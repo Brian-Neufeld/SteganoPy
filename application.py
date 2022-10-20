@@ -2,7 +2,7 @@ import numpy as np
 import PIL
 from PIL import ImageTk,Image 
 import tkinter as tk
-from tkinter import HORIZONTAL, Menu, StringVar, filedialog as fd
+from tkinter import CENTER, HORIZONTAL, Menu, StringVar, filedialog as fd
 from tkinter import ttk, font
 from tkinter.messagebox import showinfo
 import time
@@ -174,7 +174,7 @@ class GUI:
         open_encoded_img_button = tk.Button(tab2, text='Open an image file', height = 2, width=20, command=self.open_encoded_img_fn)
         open_encoded_img_button.place(x=0, y=5)
 
-        decode_button = tk.Button(tab2, text='Decode', height = 2, width=20, command=decode_fn)
+        decode_button = tk.Button(tab2, text='Decode', height = 2, width=20, command=self.decode_threading_fn)
         decode_button.place(x=0, y=55)
 
         openencodedimgfilename = tk.Label(tab2, text="None Selected", bd=2, relief="sunken")  
@@ -372,6 +372,9 @@ class GUI:
 
     def encode_threading_fn(self):
         threading.Thread(target=encode_fn).start()
+
+    def decode_threading_fn(self):
+        threading.Thread(target=decode_fn).start()
 
     def open_encoded_img_fn(self):
         global encoded_img_filename
@@ -963,22 +966,9 @@ def encode_fn():
     if f == "" or f == None:
         return
 
-    # popup progress bar code #####################################
-    global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
+    label = "Image is being encoded"
 
-    progressbar_popup = tk.Toplevel(height=100, width=400)
-    progressbar_label = tk.Label(progressbar_popup, text="Audio is being encoded")
-    progressbar_label.place(x=150, y=25)
-    
-    general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient="horizontal", length=350, mode='determinate')
-    general_progress_bar1.place(x=25, y=50)
-
-    general_pb_label = ttk.Label(progressbar_popup, text="0%")
-    general_pb_label.place(x=150,y=75)
-
-    progressbar_popup.update_idletasks()
-    
-    ##############################################################
+    progressbar_popup_fn(label)
 
     # opens image to array
     im_open = Image.open(base_img_filename)
@@ -1143,7 +1133,12 @@ def encode_fn():
 
 def decode_fn():
     global base_img_filename
-    img_decode = Image.open(r"e:\Programming\Projects\audio_image_encoding\IMG_6091 encoded.png")
+    
+    label = "Image is being decoded"
+
+    progressbar_popup_fn(label)
+
+    img_decode = Image.open(r"e:\Programming\Projects\audio_image_encoding\IMG_6091small encoded.png")
     
     a = np.asarray(img_decode)
     audioarray = np.zeros(int(len(a)*len(a[0])/2))
@@ -1188,27 +1183,9 @@ def encrypt_audio(audio_array_to_encode):
 
     pygame.mixer.stop()
 
-    # popup progress bar code #####################################
-    global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
+    label = "Audio is being encrypted"
 
-    if "progressbar_popup" in globals():
-        pass
-    else:
-        progressbar_popup = tk.Toplevel(height=100, width=400)
-
-
-    progressbar_label = tk.Label(progressbar_popup, text="Audio is being encrypted")
-    progressbar_label.place(x=150, y=25)
-    
-    general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient="horizontal", length=350, mode='determinate')
-    general_progress_bar1.place(x=25, y=50)
-
-    general_pb_label = ttk.Label(progressbar_popup, text="0%")
-    general_pb_label.place(x=150,y=75)
-
-    progressbar_popup.update_idletasks()
-    
-    ##############################################################
+    progressbar_popup_fn(label)
     
     audio_array_output = np.zeros(len(audio_array_to_encode))
     
@@ -1262,27 +1239,9 @@ def encrypt_audio(audio_array_to_encode):
 def decrypt_audio(audio_array_to_decode):
     pygame.mixer.stop()
 
-    # popup progress bar code #####################################
-    global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
+    label = "Audio is being decrypted"
 
-    if "progressbar_popup" in globals():
-        pass
-    else:
-        progressbar_popup = tk.Toplevel(height=100, width=400)
-
-
-    progressbar_label = tk.Label(progressbar_popup, text="Audio is being decrypted")
-    progressbar_label.place(x=150, y=25)
-    
-    general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient="horizontal", length=350, mode='determinate')
-    general_progress_bar1.place(x=25, y=50)
-
-    general_pb_label = ttk.Label(progressbar_popup, text="0%")
-    general_pb_label.place(x=150,y=75)
-
-    progressbar_popup.update_idletasks()
-    
-    ##############################################################
+    progressbar_popup_fn(label)
     
     audio_array_output = np.zeros(len(audio_array_to_decode))
     
@@ -1415,6 +1374,31 @@ def add_silence(audio_array_to_decode):
             silence_array = audio_array_to_decode[:x]
             print(silence_array)
 
+
+def progressbar_popup_fn(label):
+    # popup progress bar code 
+    global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
+
+    if "progressbar_popup" in globals():
+        pass
+    else:
+        progressbar_popup = tk.Toplevel(height=100, width=400)
+    
+    
+
+    progressbar_label = ttk.Label(progressbar_popup, text=label, anchor = "center")
+    progressbar_label.place(x=200, y=25, anchor = tk.CENTER)
+    
+    general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient="horizontal", length=350, mode='determinate')
+    general_progress_bar1.place(x=25, y=50)
+
+    general_pb_label = ttk.Label(progressbar_popup, text="0%")
+    general_pb_label.place(x=200,y=85, anchor = tk.CENTER)
+
+    progressbar_popup.update_idletasks()
+    
+
+    
 
 def general_progress_bar(increment, total):
     general_progress_bar1["value"] = increment/total * 100
