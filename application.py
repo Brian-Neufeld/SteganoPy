@@ -2,9 +2,10 @@ import numpy as np
 import PIL
 from PIL import ImageTk,Image 
 import tkinter as tk
-from tkinter import CENTER, HORIZONTAL, Menu, StringVar, filedialog as fd
+from tkinter import CENTER, HORIZONTAL, W, Menu, StringVar, filedialog as fd
 from tkinter import ttk, font
 from tkinter.messagebox import showinfo
+from tktooltip import ToolTip
 import time
 import math
 import pydub
@@ -51,6 +52,7 @@ audio_array_to_encode = 1
 
 encrypt_check = tk.IntVar()
 remove_silence_check = tk.IntVar()
+vary_image_size_check = tk.IntVar()
 
 tabControl = ttk.Notebook(root)
 
@@ -109,7 +111,7 @@ class GUI:
         additional_features_frame = tk.Frame(tab1, width=165, height=400, bd=2, relief="sunken")
         additional_features_frame.place(x=0, y=235)
 
-        encoding_options_label = tk.Label(additional_features_frame, text="Encoding Method:", font= ('TkDefaultFont 9 bold underline'))
+        encoding_options_label = tk.Label(additional_features_frame, text="Audio Format:", font= ('TkDefaultFont 9 bold underline'))
         encoding_options_label.place(x=0, y=0)
 
         encoding_options = ("16 Bit Mono", "8 Bit Mono", "16 Bit Stereo", "8 Bit Stereo")
@@ -120,33 +122,32 @@ class GUI:
         encoding_options_menu.config(justify="left")
         encoding_options_menu.place(x=0, y=20, width=160, height=25)
 
-        encoding_options_label = tk.Label(additional_features_frame, text="Encryption:", font= ('TkDefaultFont 9 bold underline'))
-        encoding_options_label.place(x=0, y=50)
-
         checkbox_excrypt = tk.Checkbutton(additional_features_frame, text = "Encrypt Audio with Key", variable=encrypt_check)
-        checkbox_excrypt.place(x=0, y=75)
+        checkbox_excrypt.place(x=0, y=50)
 
         key_entry_label = ttk.Label(additional_features_frame, text="64 Bit Encryption Key:")
-        key_entry_label.place(x=0,y=100)
+        key_entry_label.place(x=0,y=75)
 
         inputtextkey_tab1 = tk.Entry(additional_features_frame, bd=2)
-        inputtextkey_tab1.place(x=2, y=125, width=156)
+        inputtextkey_tab1.place(x=2, y=100, width=156)
 
         textBox_tab1 = tk.Entry(additional_features_frame, bd=2)
         textBox_tab1.insert(0, "abc123")
-        textBox_tab1.place(x=2, y=125, width=156)
+        textBox_tab1.place(x=2, y=100, width=156)
 
-        encoding_options_label = tk.Label(additional_features_frame, text="Remove Silence:", font= ('TkDefaultFont 9 bold underline'))
-        encoding_options_label.place(x=0, y=150)
+        checkbox_vary_image_size = tk.Checkbutton(additional_features_frame, text = "Vary Image Size", variable=vary_image_size_check)
+        checkbox_vary_image_size.place(x=0, y=125)
+        ToolTip(checkbox_vary_image_size, msg="Varies image size to fit the audio", delay=1.0)
 
         checkbox_remove_silence = tk.Checkbutton(additional_features_frame, text = "Remove Silence", variable=remove_silence_check)
-        checkbox_remove_silence.place(x=0, y=175)
+        checkbox_remove_silence.place(x=0, y=150)
+        ToolTip(checkbox_remove_silence, msg="Removes long silence from audio to reduce its length", delay=1.0)
 
         dB_label = tk.Label(additional_features_frame, text="dB cutoff")
-        dB_label.place(x=105, y=220)
+        dB_label.place(x=105, y=195)
 
         silence_dB_level = tk.Scale(additional_features_frame, from_=-60 , to=-0, orient=HORIZONTAL)
-        silence_dB_level.place(x=0, y=200)
+        silence_dB_level.place(x=0, y=175)
 
         baseImgdims = tk.Label(tab1,text=f'width: {base_img_width} height: {base_img_height}', bd=2, relief="sunken")
         baseImgdims.place(x=173, y=385)
@@ -318,6 +319,61 @@ class GUI:
         
         return base_img_filename
 
+    def open_encoded_img_fn(self):
+        global encoded_img_filename
+
+        encoded_img_filename_old = encoded_img_filename
+
+        filetypes = (
+            ("Image files", ("*.jpg", "*.png")),
+            ("All files", "*.*")
+        )
+
+        encoded_img_filename = fd.askopenfilename(
+            title = "Open a File",
+            initialdir="/",
+            filetypes=filetypes
+        )
+
+        if encoded_img_filename == "":
+            encoded_img_filename = encoded_img_filename_old
+            return
+
+        encoded_img_filename = "".join(encoded_img_filename)
+        
+        encodedimg = Image.open(encoded_img_filename)
+        encodedimg1 = ImageTk.PhotoImage(encodedimg)
+
+        openencodedimgfilename.config(text=encoded_img_filename.split("/")[-1])
+
+        encoded_img_width = encodedimg1.width()
+        encoded_img_height = encodedimg1.height()
+
+        
+
+        if encoded_img_width > encoded_img_height:
+            encoded_w_scale = 1
+            encoded_h_scale = encoded_img_height / encoded_img_width
+        elif encoded_img_height > encoded_img_width:
+            encoded_h_scale = 1
+            encoded_w_scale = encoded_img_width / encoded_img_height
+        elif encoded_img_width == encoded_img_height:
+            encoded_w_scale = 1
+            encoded_h_scale = 1
+
+        encodedw = int(500 * encoded_w_scale)
+        encodedh = int(500 * encoded_h_scale)
+        resize_img = encodedimg.resize((encodedw, encodedh))
+        encodedimg = ImageTk.PhotoImage(resize_img)
+        disp_encodedimg.config(image=encodedimg)
+        disp_encodedimg.image = encodedimg
+
+
+        baseImgdims.config(text = f'witdth: {base_img_width} height: {base_img_height}')
+        baseImgdims.place_configure(y=500*base_h_scale+120)
+        
+        baseFrameencoded.config(width=(500*encoded_w_scale+8), height=(500*encoded_h_scale+8))
+
     def open_audio_file_fn(self):
         global audio_array, audioclip
         global audio_filename
@@ -375,69 +431,6 @@ class GUI:
 
     def decode_threading_fn(self):
         threading.Thread(target=decode_fn).start()
-
-    def open_encoded_img_fn(self):
-        global encoded_img_filename
-        global encodedimg
-        global encodedimg1
-        global encoded_img_width, encoded_img_height, encoded_w_scale, encoded_h_scale
-
-        filetypes = (
-            ("Image files", ("*.jpg", "*.png")),
-            ("All files", "*.*")
-        )
-
-        encoded_img_filename = fd.askopenfilename(
-            title = "Open a File",
-            initialdir="/",
-            filetypes=filetypes
-        )
-
-        if encoded_img_filename == "":
-            return
-
-        encoded_img_filename = "".join(encoded_img_filename)
-        
-
-
-        encodedimg = Image.open(encoded_img_filename)
-        encodedimg1 = ImageTk.PhotoImage(encodedimg)
-
-        openencodedimgfilename.config(text=encoded_img_filename.split("/")[-1])
-
-        encoded_img_width = encodedimg1.width()
-        encoded_img_height = encodedimg1.height()
-
-        
-
-        if encoded_img_width > encoded_img_height:
-            encoded_w_scale = 1
-            encoded_h_scale = encoded_img_height / encoded_img_width
-        elif encoded_img_height > encoded_img_width:
-            encoded_h_scale = 1
-            encoded_w_scale = encoded_img_width / encoded_img_height
-        elif encoded_img_width == encoded_img_height:
-            encoded_w_scale = 1
-            encoded_h_scale = 1
-        
-        print(encoded_w_scale)
-        print(encoded_h_scale)
-
-        encodedw = int(500 * encoded_w_scale)
-        encodedh = int(500 * encoded_h_scale)
-        resize_img = encodedimg.resize((encodedw, encodedh))
-        encodedimg = ImageTk.PhotoImage(resize_img)
-        disp_encodedimg.config(image=encodedimg)
-        disp_encodedimg.image = encodedimg
-
-
-        baseImgdims.config(text = f'witdth: {base_img_width} height: {base_img_height}')
-        baseImgdims.place_configure(y=500*base_h_scale+120)
-        
-        baseFrameencoded.config(width=(500*encoded_w_scale+8), height=(500*encoded_h_scale+8))
-
-        
-        return encoded_img_filename
 
     def play_pause_audio(self): 
         if type(audio_array).__name__ == "int":
@@ -817,6 +810,7 @@ class GUI:
     def donothing():
         pass
 
+
 def preview_fn():
     global audioarray
     global base_img_filename, audio_filename
@@ -950,13 +944,11 @@ def preview_fn():
 def encode_fn():
     global base_img_filename, audio_filename
 
-
     # image file to save to
     filetypes = (
         ("PNG", "*.png"),
         ("All files", "*.*")
         )
-
     
     img_save_name = base_img_filename.split("/")[-1].split(".")[0]
 
@@ -966,8 +958,8 @@ def encode_fn():
     if f == "" or f == None:
         return
 
+    # opens progress bar window
     label = "Image is being encoded"
-
     progressbar_popup_fn(label)
 
     # opens image to array
@@ -985,19 +977,28 @@ def encode_fn():
     # opens audio as array
     audioclip = pydub.AudioSegment.from_file(audio_filename)
     
-    if gui_class.encoding_type.get() == "16 Bit Stereo" or gui_class.encoding_type.get() == "8 Bit Stereo":
-        if audioclip.channels == 2:
-            pass
-        else:
-            audioclip = audioclip.set_channels(2)
+    if gui_class.encoding_type.get() == "16 Bit Stereo":
+        audioclip = audioclip.set_channels(2)
+        audioclip = audioclip.set_smaple_width(2)
         audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
 
-    elif gui_class.encoding_type.get() == "16 Bit Mono" or gui_class.encoding_type.get() == "8 Bit Mono":
-        if audioclip.channels == 1:
-            pass
-        else:
-            audioclip = audioclip.set_channels(1)
+    elif gui_class.encoding_type.get() == "16 Bit Mono":
+        audioclip = audioclip.set_channels(1)
+        audioclip = audioclip.set_sample_width(2)
         audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
+
+    elif gui_class.encoding_type.get() == "8 Bit Stereo":
+        audioclip = audioclip.set_channels(2)
+        audioclip = audioclip.set_smaple_width(1)
+        audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
+
+    elif gui_class.encoding_type.get() == "8 Bit Mono":
+        audioclip = audioclip.set_channels(1)
+        audioclip = audioclip.set_sample_width(1)
+        audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
+
+
+
 
     print(audio_array_to_encode)
 
@@ -1012,6 +1013,28 @@ def encode_fn():
         audio_array_to_encode = encrypt_audio(audio_array_to_encode)
         progressbar_label.config(text="Audio is being encoded")
         progressbar_popup.update_idletasks()
+
+    # vary image size to fit entire audio array
+    if vary_image_size_check.get() == 1:
+        
+        im = Image.fromarray(image_array)
+        numbe_of_pixels_needed = len(audio_array_to_encode)
+        if base_w_scale != 1:
+            h = math.sqrt(numbe_of_pixels_needed/base_w_scale) 
+            w = numbe_of_pixels_needed/h
+        elif base_h_scale != 1:
+            w = math.sqrt(numbe_of_pixels_needed/base_h_scale) 
+            h = numbe_of_pixels_needed/w
+        else:
+            w = math.sqrt(numbe_of_pixels_needed)
+            h = w
+
+        w = math.ceil(w)
+        h = math.ceil(h)
+        print((w,h))
+        im = im.resize((w,h))
+        image_array = np.array(im)
+        print(len(image_array))
 
 
     # inserts digit at the start of the audio array to inform program of how it has been encoded
@@ -1033,8 +1056,12 @@ def encode_fn():
         
     audio_array_to_encode = np.insert(audio_array_to_encode, 0, start_digit)
 
-    audio_array_to_encode = audio_array_to_encode + ((2**16)/2)
-    audio_array_to_encode = audio_array_to_encode.astype(dtype=np.uint16)
+    if "16" in gui_class.encoding_type.get():
+        audio_array_to_encode = audio_array_to_encode + ((2**16)/2)
+        audio_array_to_encode = audio_array_to_encode.astype(dtype=int)
+    elif "8" in gui_class.encoding_type.get():
+        audio_array_to_encode = audio_array_to_encode + ((2**8)/2)
+        audio_array_to_encode = audio_array_to_encode.astype(dtype=int)
     
 
     if len(audio_array_to_encode)*2 > (len(image_array) * len(image_array[0]) * 3):
@@ -1084,7 +1111,23 @@ def encode_fn():
     # For 8 bit audio, the digits of each audio sample are split and divided across the colours of 1 pixel
     # The last digit of each colour is a digit from the audio
     if "8 Bit" in gui_class.encoding_type.get():
-        pass
+        for x in range(len(image_array)):
+            for y in range(len(image_array[x])):
+                for z in range(len(image_array[x][y])):
+                    if audio_index < len(audio_array_to_encode):
+                        if image_array[x][y][z] >= 250:
+                            image_array[x][y][z] = 250
+
+                        image_array[x][y][z] = round(image_array[x][y][z]/10)*10
+
+
+                        image_array[x][y][z] += int(str(audio_array_to_encode[audio_index])[z])
+
+                        if z == 2:
+                            audio_index += 1
+
+            general_progress_bar(x, len(image_array))
+            progressbar_popup.update_idletasks()           
 
 
 
@@ -1132,13 +1175,33 @@ def encode_fn():
     im2.close()
 
 def decode_fn():
-    global base_img_filename
+    global encoded_img_filename
+
+    if encoded_img_filename == 1:
+        messagebox.showerror('Program Error', 'Error: No image file seleted')
+        return
+
+    # image file to save to
+    filetypes = (
+        ("WAV", "*.wav"),
+        ("All files", "*.*")
+        )
+    
+    decoded_audio_save_name = encoded_img_filename.split("/")[-1].split(".")[0]
+
+    f = fd.asksaveasfile(mode='w', filetypes = filetypes, defaultextension = filetypes, initialfile=f"{decoded_audio_save_name} decoded")
+
+    # cancel encoding if the user doesn't select a file to save to 
+    if f == "" or f == None:
+        return
+
+
     
     label = "Image is being decoded"
 
     progressbar_popup_fn(label)
 
-    img_decode = Image.open(r"e:\Programming\Projects\audio_image_encoding\IMG_6091small encoded.png")
+    img_decode = Image.open(encoded_img_filename)
     
     a = np.asarray(img_decode)
     audioarray = np.zeros(int(len(a)*len(a[0])/2))
@@ -1155,8 +1218,6 @@ def decode_fn():
                 audioarray[audio_index] += get_digit(a[x][y][0], 0)*100 + get_digit(a[x][y][1], 0)*10 + get_digit(a[x][y][2], 0)*1
                 audio_index += 1
 
-    
-    
     audio_out = audioarray - ((2**16)/2)
 
     start_digit = audio_out[0]
@@ -1173,7 +1234,7 @@ def decode_fn():
 
     y = np.int16(audioarray)
     song = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
-    song.export("decoded audio.wav", format="wav", bitrate="48k")
+    song.export(f.name, format="wav", bitrate="48k")
 
     progressbar_popup.destroy()
     
@@ -1386,7 +1447,7 @@ def progressbar_popup_fn(label):
     
     
 
-    progressbar_label = ttk.Label(progressbar_popup, text=label, anchor = "center")
+    progressbar_label = ttk.Label(progressbar_popup, text=label)
     progressbar_label.place(x=200, y=25, anchor = tk.CENTER)
     
     general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient="horizontal", length=350, mode='determinate')
@@ -1395,10 +1456,7 @@ def progressbar_popup_fn(label):
     general_pb_label = ttk.Label(progressbar_popup, text="0%")
     general_pb_label.place(x=200,y=85, anchor = tk.CENTER)
 
-    progressbar_popup.update_idletasks()
-    
-
-    
+    progressbar_popup.update_idletasks()  
 
 def general_progress_bar(increment, total):
     general_progress_bar1["value"] = increment/total * 100
