@@ -6,6 +6,7 @@ from tkinter import CENTER, HORIZONTAL, W, Menu, StringVar, filedialog as fd
 from tkinter import ttk, font
 from tkinter.messagebox import showinfo
 from tktooltip import ToolTip
+import PyTaskbar
 import time
 import math
 import pydub
@@ -24,6 +25,9 @@ import threading
 matplotlib.rcParams['agg.path.chunksize'] = 10000
 
 pygame.mixer.init(frequency=48000, size=-16, channels=2, allowedchanges=0)
+
+prog = PyTaskbar.Progress()
+prog.init()
 
 root = tk.Tk()
 root.geometry('1500x850')
@@ -942,7 +946,7 @@ def preview_fn():
     progressbar_popup.destroy()
 
 def encode_fn():
-    global base_img_filename, audio_filename
+    global base_img_filename, audio_filename, progressbar_popup
 
     # image file to save to
     filetypes = (
@@ -979,7 +983,7 @@ def encode_fn():
     
     if gui_class.encoding_type.get() == "16 Bit Stereo":
         audioclip = audioclip.set_channels(2)
-        audioclip = audioclip.set_smaple_width(2)
+        audioclip = audioclip.set_sample_width(2)
         audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
 
     elif gui_class.encoding_type.get() == "16 Bit Mono":
@@ -989,7 +993,7 @@ def encode_fn():
 
     elif gui_class.encoding_type.get() == "8 Bit Stereo":
         audioclip = audioclip.set_channels(2)
-        audioclip = audioclip.set_smaple_width(1)
+        audioclip = audioclip.set_sample_width(1)
         audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
 
     elif gui_class.encoding_type.get() == "8 Bit Mono":
@@ -1062,6 +1066,8 @@ def encode_fn():
     elif "8" in gui_class.encoding_type.get():
         audio_array_to_encode = audio_array_to_encode + ((2**8)/2)
         audio_array_to_encode = audio_array_to_encode.astype(dtype=int)
+
+    print(audio_array_to_encode)
     
 
     if len(audio_array_to_encode)*2 > (len(image_array) * len(image_array[0]) * 3):
@@ -1169,13 +1175,19 @@ def encode_fn():
         imgheight = 500
 
     progressbar_popup.destroy()
+    del progressbar_popup
+    prog.setState('done')
+    time.sleep(1)
+    prog.setProgress(0)
+
+
 
     im2 = Image.fromarray(image_array)
     im2.save(str(f.name))
     im2.close()
 
 def decode_fn():
-    global encoded_img_filename
+    global encoded_img_filename, progressbar_popup
 
     if encoded_img_filename == 1:
         messagebox.showerror('Program Error', 'Error: No image file seleted')
@@ -1195,49 +1207,63 @@ def decode_fn():
     if f == "" or f == None:
         return
 
-
-    
+    # creates popup progress bar
     label = "Image is being decoded"
-
     progressbar_popup_fn(label)
 
     img_decode = Image.open(encoded_img_filename)
-    
+
     a = np.asarray(img_decode)
-    audioarray = np.zeros(int(len(a)*len(a[0])/2))
-    
+
+
+    thing1 = str(a[0][0][0])[-1] + str(a[0][0][1])[-1] + str(a[0][0][2])[-1]
+    thing2 = str(a[0][1][0])[-1] + str(a[0][1][1])[-1] + str(a[0][1][2])[-1]
+
 
     audio_index = 0
+    if thing1[0] == "0":
+        magic_number = str(round(int(thing1+thing2)-(2**16)/2))
+    else:
+        magic_number = str(round(int(thing1)-(2**8)/2))
 
-    for x in range(len(a)):
-        for y in range(len(a[x])):
-            if (x*len(a[x])+y) % 2 == 0:
-                audioarray[audio_index] = get_digit(a[x][y][0], 0)*100000 + get_digit(a[x][y][1], 0)*10000 + get_digit(a[x][y][2], 0)*1000
-            
-            elif (x*len(a[x])+y) % 2 == 1:
-                audioarray[audio_index] += get_digit(a[x][y][0], 0)*100 + get_digit(a[x][y][1], 0)*10 + get_digit(a[x][y][2], 0)*1
+    print(magic_number)
+    
+
+    if magic_number[-3] in ("1", "3") :
+        audioarray = np.zeros(int(len(a)*len(a[0])/2))
+        for x in range(len(a)):
+            for y in range(len(a[x])):
+                if (x*len(a[x])+y) % 2 == 0:
+                    audioarray[audio_index] = get_digit(a[x][y][0], 0)*100000 + get_digit(a[x][y][1], 0)*10000 + get_digit(a[x][y][2], 0)*1000
+                
+                elif (x*len(a[x])+y) % 2 == 1:
+                    audioarray[audio_index] += get_digit(a[x][y][0], 0)*100 + get_digit(a[x][y][1], 0)*10 + get_digit(a[x][y][2], 0)*1
+                    audio_index += 1
+
+        audio_out = audioarray - ((2**16)/2)
+        start_digit = audio_out[0]
+        audioarray = audio_out[1:].astype(dtype=np.int16)
+    else:
+        audioarray = np.zeros(int(len(a)*len(a[0])))
+        for x in range(len(a)):
+            for y in range(len(a[x])):
+                audioarray[audio_index] = get_digit(a[x][y][0], 0)*100 + get_digit(a[x][y][1], 0)*10 + get_digit(a[x][y][2], 0)*1
                 audio_index += 1
 
-    audio_out = audioarray - ((2**16)/2)
 
-    start_digit = audio_out[0]
-
-    audioarray = audio_out[1:].astype(dtype=np.int16)
-
-    if str(int(start_digit))[-1] == "1":
+    if magic_number[-1] == "1":
         audioarray = decrypt_audio(audioarray)
-        
-
-    if str(int(start_digit))[-2] == "1":
+            
+    if magic_number[-2] == "1":
         audio_array = add_silence(audio_array)
-
 
     y = np.int16(audioarray)
     song = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
     song.export(f.name, format="wav", bitrate="48k")
 
+
     progressbar_popup.destroy()
-    
+    del progressbar_popup    
 
 def encrypt_audio(audio_array_to_encode):
     global audio_array_output
@@ -1275,9 +1301,6 @@ def encrypt_audio(audio_array_to_encode):
 
     for x in range(len(audio_array_to_encode)):
         audio_array_output[x] = encryptionmodule.encrypt(intkey, int(audio_array_to_encode[x]), x)
-
-        
-        
         if x > 0:
             if x % percentofaudio == 0: 
                 general_progress_bar(x, len(audio_array_to_encode))
@@ -1436,6 +1459,9 @@ def add_silence(audio_array_to_decode):
             print(silence_array)
 
 
+
+
+
 def progressbar_popup_fn(label):
     # popup progress bar code 
     global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
@@ -1459,6 +1485,8 @@ def progressbar_popup_fn(label):
     progressbar_popup.update_idletasks()  
 
 def general_progress_bar(increment, total):
+    prog.setState('loading')
+    prog.setProgress(int(increment/total * 100))
     general_progress_bar1["value"] = increment/total * 100
     general_pb_label["text"] = update_general_pb()
     progressbar_popup.update_idletasks()
