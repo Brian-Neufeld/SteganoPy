@@ -126,32 +126,44 @@ class GUI:
         encoding_options_menu.config(justify="left")
         encoding_options_menu.place(x=0, y=20, width=160, height=25)
 
+        sample_rate_options_label = tk.Label(additional_features_frame, text="Sample Rate:", font= ('TkDefaultFont 9 bold underline'))
+        sample_rate_options_label.place(x=0, y=50)
+
+        sample_rate_options = ("32000 Hz", "44100 Hz", "48000 Hz", "96000 Hz", "192000 Hz")
+        self.sample_rate = StringVar(root)
+        self.sample_rate.set("44100 Hz")
+        
+        sample_rate_menu = tk.OptionMenu(additional_features_frame, self.sample_rate, *sample_rate_options)
+        sample_rate_menu.config(justify="left")
+        sample_rate_menu.place(x=0, y=70, width=160, height=25)
+
+
         checkbox_excrypt = tk.Checkbutton(additional_features_frame, text = "Encrypt Audio with Key", variable=encrypt_check)
-        checkbox_excrypt.place(x=0, y=50)
+        checkbox_excrypt.place(x=0, y=100)
 
         key_entry_label = ttk.Label(additional_features_frame, text="64 Bit Encryption Key:")
-        key_entry_label.place(x=0,y=75)
+        key_entry_label.place(x=0,y=125)
 
         inputtextkey_tab1 = tk.Entry(additional_features_frame, bd=2)
-        inputtextkey_tab1.place(x=2, y=100, width=156)
+        inputtextkey_tab1.place(x=2, y=150, width=156)
 
         textBox_tab1 = tk.Entry(additional_features_frame, bd=2)
         textBox_tab1.insert(0, "abc123")
-        textBox_tab1.place(x=2, y=100, width=156)
+        textBox_tab1.place(x=2, y=150, width=156)
 
         checkbox_vary_image_size = tk.Checkbutton(additional_features_frame, text = "Vary Image Size", variable=vary_image_size_check)
-        checkbox_vary_image_size.place(x=0, y=125)
+        checkbox_vary_image_size.place(x=0, y=175)
         ToolTip(checkbox_vary_image_size, msg="Varies image size to fit the audio", delay=1.0)
 
         checkbox_remove_silence = tk.Checkbutton(additional_features_frame, text = "Remove Silence", variable=remove_silence_check)
-        checkbox_remove_silence.place(x=0, y=150)
+        checkbox_remove_silence.place(x=0, y=200)
         ToolTip(checkbox_remove_silence, msg="Removes long silence from audio to reduce its length", delay=1.0)
 
         dB_label = tk.Label(additional_features_frame, text="dB cutoff")
-        dB_label.place(x=105, y=195)
+        dB_label.place(x=105, y=240)
 
         silence_dB_level = tk.Scale(additional_features_frame, from_=-60 , to=-0, orient=HORIZONTAL)
-        silence_dB_level.place(x=0, y=175)
+        silence_dB_level.place(x=0, y=220)
 
         baseImgdims = tk.Label(tab1,text=f'width: {base_img_width} height: {base_img_height}', bd=2, relief="sunken")
         baseImgdims.place(x=173, y=385)
@@ -980,6 +992,8 @@ def encode_fn():
     
     # opens audio as array
     audioclip = pydub.AudioSegment.from_file(audio_filename)
+    print(int(gui_class.sample_rate.get()[:-3]))
+    audioclip = audioclip.set_frame_rate(int(gui_class.sample_rate.get()[:-3]))
     
     if gui_class.encoding_type.get() == "16 Bit Stereo":
         audioclip = audioclip.set_channels(2)
@@ -1044,7 +1058,7 @@ def encode_fn():
     # inserts digit at the start of the audio array to inform program of how it has been encoded
     start_digit = 0
     if gui_class.encoding_type.get() == "16 Bit Stereo": 
-        start_digit = 100
+        start_digit += 100
     elif gui_class.encoding_type.get() == "8 Bit Stereo":
         start_digit += 200
     elif gui_class.encoding_type.get() == "16 Bit Mono": 
@@ -1052,11 +1066,24 @@ def encode_fn():
     elif gui_class.encoding_type.get() == "8 Bit Mono":
         start_digit += 400
 
-    if remove_silence_check.get() == 1:
+    if gui_class.sample_rate.get() == "32000 Hz":
         start_digit += 10
-    
-    if encrypt_check.get() == 1:
+    elif gui_class.sample_rate.get() == "44100 Hz":
+        start_digit += 20
+    elif gui_class.sample_rate.get() == "48000 Hz":
+        start_digit += 30
+    elif gui_class.sample_rate.get() == "96000 Hz":
+        start_digit += 40
+    elif gui_class.sample_rate.get() == "192000 Hz":
+        start_digit += 50
+
+    if remove_silence_check.get() == 1 and encrypt_check.get() == 1:
+        start_digit += 3
+    elif remove_silence_check.get() == 0 and encrypt_check.get() == 1:
+        start_digit += 2
+    elif remove_silence_check.get() == 1 and encrypt_check.get() == 0:
         start_digit += 1
+    
         
     audio_array_to_encode = np.insert(audio_array_to_encode, 0, start_digit)
 
@@ -1181,7 +1208,6 @@ def encode_fn():
     prog.setProgress(0)
 
 
-
     im2 = Image.fromarray(image_array)
     im2.save(str(f.name))
     im2.close()
@@ -1215,10 +1241,9 @@ def decode_fn():
 
     a = np.asarray(img_decode)
 
-
+    # extracts the magic number of the image which tells the program how to decode it
     thing1 = str(a[0][0][0])[-1] + str(a[0][0][1])[-1] + str(a[0][0][2])[-1]
     thing2 = str(a[0][1][0])[-1] + str(a[0][1][1])[-1] + str(a[0][1][2])[-1]
-
 
     audio_index = 0
     if thing1[0] == "0":
@@ -1240,8 +1265,9 @@ def decode_fn():
                     audioarray[audio_index] += get_digit(a[x][y][0], 0)*100 + get_digit(a[x][y][1], 0)*10 + get_digit(a[x][y][2], 0)*1
                     audio_index += 1
 
+            general_progress_bar(x, len(a))
+            progressbar_popup.update_idletasks()
         audio_out = audioarray - ((2**16)/2)
-        start_digit = audio_out[0]
         audioarray = audio_out[1:].astype(dtype=np.int16)
     else:
         audioarray = np.zeros(int(len(a)*len(a[0])))
@@ -1250,20 +1276,56 @@ def decode_fn():
                 audioarray[audio_index] = get_digit(a[x][y][0], 0)*100 + get_digit(a[x][y][1], 0)*10 + get_digit(a[x][y][2], 0)*1
                 audio_index += 1
 
+            general_progress_bar(x, len(a))
+            progressbar_popup.update_idletasks()
 
-    if magic_number[-1] == "1":
+        audio_out = audioarray - ((2**8)/2)
+        audioarray = audio_out[1:].astype(dtype=np.int8)
+
+    if magic_number[-1] in ("3", "2"):
         audioarray = decrypt_audio(audioarray)
             
-    if magic_number[-2] == "1":
+    if magic_number[-1] in ("3", "1"):
         audio_array = add_silence(audio_array)
 
-    y = np.int16(audioarray)
-    song = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
+    if magic_number[-2] == "1":
+        sample_rate = 32000
+    elif magic_number[-2] == "2":
+        sample_rate = 44100
+    elif magic_number[-2] == "3":
+        sample_rate = 48000
+    elif magic_number[-2] == "4":
+        sample_rate = 96000
+    elif magic_number[-2] == "5":
+        sample_rate = 192000
+
+    if magic_number[-3] == "1":
+        y = np.int16(audioarray)
+        audio_sample_width = 2
+        audio_channels = 2
+    elif magic_number[-3] == "2":
+        y = np.int8(audioarray)
+        audio_sample_width = 1
+        audio_channels = 2
+    elif magic_number[-3] == "3":
+        y = np.int16(audioarray)
+        audio_sample_width = 2
+        audio_channels = 1
+    elif magic_number[-3] == "4":
+        y = np.int8(audioarray)
+        audio_sample_width = 1
+        audio_channels = 1
+
+    song = pydub.AudioSegment(y.tobytes(), frame_rate=sample_rate, sample_width=audio_sample_width, channels=audio_channels)
     song.export(f.name, format="wav", bitrate="48k")
 
 
     progressbar_popup.destroy()
     del progressbar_popup    
+
+    prog.setState('done')
+    time.sleep(1)
+    prog.setProgress(0)
 
 def encrypt_audio(audio_array_to_encode):
     global audio_array_output
