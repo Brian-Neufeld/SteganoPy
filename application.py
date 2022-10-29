@@ -141,7 +141,7 @@ class GUI:
         checkbox_excrypt = tk.Checkbutton(additional_features_frame, text = "Encrypt Audio with Key", variable=encrypt_check)
         checkbox_excrypt.place(x=0, y=100)
 
-        key_entry_label = ttk.Label(additional_features_frame, text="64 Bit Encryption Key:")
+        key_entry_label = ttk.Label(additional_features_frame, text="Encryption Key:")
         key_entry_label.place(x=0,y=125)
 
         inputtextkey_tab1 = tk.Entry(additional_features_frame, bd=2)
@@ -151,13 +151,15 @@ class GUI:
         textBox_tab1.insert(0, "abc123")
         textBox_tab1.place(x=2, y=150, width=156)
 
+        ToolTip(textBox_tab1, msg="Maximum key size is 64 bits, key format is hexadecimal", delay=0.5)
+
         checkbox_vary_image_size = tk.Checkbutton(additional_features_frame, text = "Vary Image Size", variable=vary_image_size_check)
         checkbox_vary_image_size.place(x=0, y=175)
-        ToolTip(checkbox_vary_image_size, msg="Varies image size to fit the audio", delay=1.0)
+        ToolTip(checkbox_vary_image_size, msg="Varies image size to fit the audio", delay=0.5)
 
         checkbox_remove_silence = tk.Checkbutton(additional_features_frame, text = "Remove Silence", variable=remove_silence_check)
         checkbox_remove_silence.place(x=0, y=200)
-        ToolTip(checkbox_remove_silence, msg="Removes long silence from audio to reduce its length", delay=1.0)
+        ToolTip(checkbox_remove_silence, msg="Removes long silence from audio to reduce its length", delay=0.5)
 
         dB_label = tk.Label(additional_features_frame, text="dB cutoff")
         dB_label.place(x=105, y=240)
