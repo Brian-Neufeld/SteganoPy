@@ -48,7 +48,20 @@ int sboxinv[16][16] = {
         {139, 11, 189, 138, 12, 129, 176, 84, 202, 168, 32, 74, 227, 140, 124, 161},
         {213, 172, 51, 185, 122, 107, 42, 78, 92, 229, 15, 167, 182, 96, 72, 43}};
 
-int rounds = 7;
+int sbox8bit[4][4] = {
+        {8, 2, 3, 5},
+        {7, 1, 12, 4},
+        {10, 0, 9, 14},
+        {15, 13, 11, 6} };
+
+int sboxinv8bit[4][4] = {
+        {9, 5, 1, 2},
+        {7, 3, 15, 4},
+        {0, 10, 8, 14},
+        {6, 13, 11, 12} };
+
+
+int rounds = 31;
 
 #define INT_BITS 8
 
@@ -66,40 +79,36 @@ int rightRotate(int n, unsigned int d)
 }
 
 
-int encode(unsigned long long int key, int audio_sample, int x) {
-    
-
-    //std::cout << audio_sample;
-    //std::cout << "\n";
-
+int encrypt(unsigned long long int key, int audio_sample, int x) {
+    // converts key to a binary string
     std::string keystr = std::to_string(key);
     std::string keybinary = std::bitset< 64 >(key).to_string();
-    
 
-
+    // splits key into 8 8 bit key parts
     for (int i = 0; i < 8; i++) {
         std::string keypart = keybinary.substr(i*8, 8);
         keys[i] = stoi(keypart, 0, 2);
     }
 
+    // converts audio sample to binary string
     unsigned short int audio_samplenormalized = audio_sample;
     std::string audiobinary = std::bitset< 16 >(audio_sample).to_string();
 
+    // 4 integer words are created by spliting the audio binary string
     int w1 = stoi(audiobinary.substr(0, 4), 0, 2);
     int w2 = stoi(audiobinary.substr(4, 4), 0, 2);
     int w3 = stoi(audiobinary.substr(8, 4), 0, 2);
     int w4 = stoi(audiobinary.substr(12, 4), 0, 2);
 
-
+    // the 4 integer words are used as indices in the substitution boxes to creat left and right initial integers
     int L0 = sbox[w1][w2];
-    int R0 = sbox[w3][w4];   
+    int R0 = sbox[w3][w4];
 
-    //std::cout << L0 << " " << R0;
-    //std::cout << "\n";
-    
-
+    // this is the main part of the cipher, a round key is created by left bit rotating one of the key parts
+    // this new key is then xored with R0 and then with L0 and assigned to R1 while L1 is just equal to R2
+    // this continues for a set number of rounds before the final stage occurs 
     for (int j = 0; j < rounds; j++) {
-        int roundkey = leftRotate(keys[j], (x % 8));
+        int roundkey = leftRotate(keys[j % 8], (x % 8));
         int fint = R0 ^ roundkey;
         int R1 = L0 ^ fint;
         int L1 = R0;
@@ -107,109 +116,26 @@ int encode(unsigned long long int key, int audio_sample, int x) {
         R0 = R1;
         
     }
-    
-    //std::cout << "\n";
 
+    // in the final ecryption stage, L and R are not swapped at the end
     int roundkey = leftRotate(keys[rounds], (x % 8));
     int fint = R0 ^ roundkey;
     int L1 = L0 ^ fint;
     int R1 = R0;
     int Lout = L1;
     int Rout = R1;
-    
 
-    //std::cout << stoi(std::bitset< 8 >(Lout).to_string(),0,2) << " " << stoi(std::bitset< 8 >(Rout).to_string(),0,2) << " Lout Rout";
-    //std::cout << "\n";
-
+    // L and R are now converted back to a binary string 
     std::string Loutstr = std::bitset< 8 >(Lout).to_string();
     std::string Routstr = std::bitset< 8 >(Rout).to_string();
 
+    // the binary strings are then converted to an integer 
     short int outaudio_sample = stoi(Loutstr + Routstr, 0, 2);
-
-    //std::cout << outaudio_sample;
-    //std::cout << "\n";
-    
-    //std::cout << outaudio_sample;
-    //std::cout << "\n";
-
-    
-    
-    unsigned short int encodedaudio = outaudio_sample;
-
-    //std::cout << encodedaudio;
-    //std::cout << "\n";
-    
-
-    std::string encodedbin = std::bitset< 16 >(encodedaudio).to_string();
-
-    
-
-    
-    L0 = stoi(encodedbin.substr(0, 8), 0, 2);
-    R0 = stoi(encodedbin.substr(8, 8), 0, 2);
-
-    //std::cout << L1 << " " << R1;
-    //std::cout << "\n";
-
-    
-    for (int j = 0; j < rounds; j++) {
-        roundkey = leftRotate(keys[rounds-j], (x % 8));
-        fint = R0 ^ roundkey;
-        R1 = L0 ^ fint;
-        L1 = R0;
-        L0 = L1;
-        R0 = R1;
-        
-    }
-    //std::cout << "0";
-    //std::cout << "\n";
-    
-    roundkey = leftRotate(keys[0], (x % 8));
-    fint = R0 ^ roundkey;
-    L1 = L0 ^ fint;
-    R1 = R0;
-    Lout = L1;
-    Rout = R1;
-    
-
-    //std::cout << Lout << " " << Rout;
-    //std::cout << "\n";
-    //std::cout << "\n";
-
-    std::string Loutbin = std::bitset< 8 >(Lout).to_string();
-    std::string Routbin = std::bitset< 8 >(Rout).to_string();
-
-   
-    w1 = stoi(Loutbin.substr(0, 4), 0, 2);
-    w2 = stoi(Loutbin.substr(4, 4), 0, 2);
-    w3 = stoi(Routbin.substr(0, 4), 0, 2);
-    w4 = stoi(Routbin.substr(4, 4), 0, 2);
-
-    int Loutsbox = sboxinv[w1][w2];
-    int Routsbox = sboxinv[w3][w4];
-
-    std::string Loutbin2 = std::bitset< 8 >(Loutsbox).to_string();
-    std::string Routbin2 = std::bitset< 8 >(Routsbox).to_string();
-
-
-    short int outaudio_sampledecode = stoi(Loutbin2 + Routbin2, 0, 2);
-
-    
-
-    
-
-
-
-    //std::cout << outaudio_sampledecode << " decode inline";
-    //std::cout << "\n";
-    //std::cout << "\n";
-    //std::cout << "\n";
-    
 
     return outaudio_sample;
 }
 
-int decode(unsigned long long int key, int audio_sample, int x) {
+int decrypt(unsigned long long int key, int audio_sample, int x) {
     std::string keystr = std::to_string(key);
     std::string keybinary = std::bitset< 64 >(key).to_string();
 
@@ -246,7 +172,7 @@ int decode(unsigned long long int key, int audio_sample, int x) {
 
 
    for (int j = 0; j < rounds; j++) {
-       int roundkey = leftRotate(keys[rounds-j], (x % 8));
+       int roundkey = leftRotate(keys[(rounds-j) % 8], (x % 8));
        int fint = R0 ^ roundkey;
        int R1 = L0 ^ fint;
        int L1 = R0;
@@ -301,9 +227,9 @@ int decode(unsigned long long int key, int audio_sample, int x) {
     return outaudio_sampledecode;
 }
 
-PYBIND11_MODULE(superfastcodeloop, m) {
-    m.def("encode", &encode);
-    m.def("decode", &decode);
+PYBIND11_MODULE(encryptionmodule, m) {
+    m.def("encrypt", &encrypt);
+    m.def("decrypt", &decrypt);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;
