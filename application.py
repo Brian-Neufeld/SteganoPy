@@ -1089,6 +1089,8 @@ def encode_fn():
         
     audio_array_to_encode = np.insert(audio_array_to_encode, 0, start_digit)
 
+    print(audio_array_to_encode)
+    
     if "16" in gui_class.encoding_type.get():
         audio_array_to_encode = audio_array_to_encode + ((2**16)/2)
         audio_array_to_encode = audio_array_to_encode.astype(dtype=int)
@@ -1096,15 +1098,16 @@ def encode_fn():
         audio_array_to_encode = audio_array_to_encode + ((2**8)/2)
         audio_array_to_encode = audio_array_to_encode.astype(dtype=int)
 
-    print(audio_array_to_encode)
+    
     
 
     if len(audio_array_to_encode)*2 > (len(image_array) * len(image_array[0]) * 3):
         if messagebox.askyesno('Program Warning', 'Warning: Audio is too large for image and will be cropped. Do you want to continue?') == False:
             progressbar_popup.destroy()
             return
-        
-    print(audio_array_to_encode[1:round((len(image_array)*len(image_array[0]))/2)])
+    
+    print("final array")
+    print(audio_array_to_encode)
 
     # For 16 bit audio, the digits of each audio sample are split and divided across 2 pixels 
     # with the last digit of each colour being a digit from the audio
@@ -1155,8 +1158,12 @@ def encode_fn():
 
                         image_array[x][y][z] = round(image_array[x][y][z]/10)*10
 
+                        if len(str(audio_array_to_encode[audio_index]))-1 >= z:
+                            if int(str(audio_array_to_encode[audio_index])[z]) > 5:
+                                image_array[x][y][z] -= 10
 
-                        image_array[x][y][z] += int(str(audio_array_to_encode[audio_index])[z])
+
+                            image_array[x][y][z] += int(str(audio_array_to_encode[audio_index])[z])
 
                         if z == 2:
                             audio_index += 1
@@ -1435,33 +1442,15 @@ def decrypt_audio(audio_array_to_decode):
     return audio_array_output
 
 def remove_silence(audio_array_to_encode):
-
-    # popup progress bar code #####################################
-    global general_progress_bar1, progressbar_popup, general_pb_label, progressbar_label
-
-    if "progressbar_popup" in globals():
-        pass
-    else:
-        progressbar_popup = tk.Toplevel(height=100, width=400)
-
-
-    progressbar_label = tk.Label(progressbar_popup, text="Silence is being removed")
-    progressbar_label.place(x=150, y=25)
-    
-    general_progress_bar1 = ttk.Progressbar(progressbar_popup, orient="horizontal", length=350, mode='determinate')
-    general_progress_bar1.place(x=25, y=50)
-
-    general_pb_label = ttk.Label(progressbar_popup, text="0%")
-    general_pb_label.place(x=150,y=75)
-
-    progressbar_popup.update_idletasks()
-    
-    ##############################################################
-
-
-
     cutoff_level = -50 #dB
-    max_value =  10**(cutoff_level/20)*((2**16)/2)
+
+    if "16" in gui_class.encoding_type.get():
+        sample_width = 16
+    elif "8" in gui_class.encoding_type.get():
+        sample_width = 8
+
+    max_value = 10**(cutoff_level/20)*((2**sample_width)/2)
+
 
     for x in range(len(audio_array_to_encode)):
         if -max_value <= audio_array_to_encode[x] <= max_value:
@@ -1488,8 +1477,8 @@ def remove_silence(audio_array_to_encode):
             start_index = zero_locations[0][x]
             length = 1
 
-        general_progress_bar(x, len(zero_locations[0]))
-        progressbar_popup.update_idletasks()
+        #general_progress_bar(x, len(zero_locations[0]))
+        #progressbar_popup.update_idletasks()
         
     audio_array_list = audio_array_to_encode.tolist()
 
@@ -1499,20 +1488,32 @@ def remove_silence(audio_array_to_encode):
 
     silence_array = []
 
-    for z in range(len(array_of_zeros)):
-        silence_array.append(math.floor(int(array_of_zeros[z])/(2**16)))
-        silence_array.append(array_of_zeros[z] % (2**16))
+    print(array_of_zeros)
 
-    silence_array.append(10101)
-    silence_array.append(20202)
-    silence_array.append(30303)
+    if sample_width == 16:
+        for z in range(len(array_of_zeros)):
+            silence_array.append(math.floor(int(array_of_zeros[z])/(2**sample_width)))
+            silence_array.append(array_of_zeros[z] % (2**sample_width))
+    elif sample_width == 8:
+        for z in range(len(array_of_zeros)):
+            silence_array.append(math.floor(int(array_of_zeros[z])/(256**2)))
+            silence_array.append(math.floor((int(array_of_zeros[z])-silence_array[-1]*(256**2))/(256)))
+            silence_array.append(int(array_of_zeros[z]) % 256)
+    
+
+    silence_array.append(101)
+    silence_array.append(202)
+    silence_array.append(101)
+
+    print("silence_array")
+    print(silence_array)
 
     audio_array_to_encode = silence_array + audio_array_list
 
     audio_array_to_encode = np.array(audio_array_to_encode)
    
-    general_progress_bar(1, 1)
-    progressbar_popup.update_idletasks()
+    #general_progress_bar(1, 1)
+    #progressbar_popup.update_idletasks()
 
     return audio_array_to_encode
 
