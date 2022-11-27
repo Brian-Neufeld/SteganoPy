@@ -10,8 +10,11 @@
 
 namespace py = pybind11;
 
+// arrays to store the subkeys
 int keys[8];
+int keys8bit[16];
 
+// subsitution boxes and their inverses
 int sbox[16][16] = {
         {205, 30, 131, 91, 49, 1, 147, 74, 165, 80, 100, 225, 228, 164, 218, 250},
         {64, 93, 88, 213, 105, 18, 68, 208, 104, 78, 70, 77, 10, 209, 99, 95},
@@ -60,17 +63,20 @@ int sboxinv8bit[4][4] = {
         {0, 10, 8, 14},
         {6, 13, 11, 12} };
 
-
-int rounds = 31;
+// how amny rounds of xoring and swaping the data goes through
+int rounds = 32;
 
 #define INT_BITS 8
 
+// functions that rotate the bits of a number to the left or right
+// eg. 140 as an 8 bit integer rotated twice to the left would be 50
+// 0b10001100 -> 0b00110010
+// the 4 bit versions have to use an array of characters as integers are stored as unsigned ints are 8 bits
 int leftRotate(int n, unsigned int d)
 {
     d = d % 8;
     return (n << d) | (n >> (INT_BITS - d));
 }
-
 
 int rightRotate(int n, unsigned int d)
 {
@@ -78,8 +84,56 @@ int rightRotate(int n, unsigned int d)
     return (n >> d) | (n << (INT_BITS - d));
 }
 
+int leftRotate4bits(int n, unsigned int d)
+{   
+    
+    d = d % 4;
 
-int encrypt(unsigned long long int key, int audio_sample, int x) {
+    int nout = n;
+
+    if (d == 0) {
+        int nout = n;
+    }
+    else {
+        std::string n_as_char = std::bitset< 4 >(n).to_string();
+        std::string n_new_order = "";
+
+        for (int i = 0; i < d; i++)
+        {
+            n_new_order = n_as_char.substr(1, 3) + n_as_char.substr(0, 1);
+        }
+
+        int nout = stoi(n_new_order, 0, 2);
+    }
+
+    return nout;
+}
+
+int rightRotate4bits(int n, unsigned int d)
+{
+    d = d % 4;
+    int nout = n;
+
+    if (d == 0) {
+        int nout = n;
+    }
+    else {
+        std::string n_as_char = std::bitset< 4 >(n).to_string();
+        std::string n_new_order = "";
+
+        for (int i = 0; i < d; i++)
+        {
+            n_new_order = n_as_char.substr(3, 1) + n_as_char.substr(0, 3);
+        }
+
+        n = stoi(n_new_order, 0, 2);
+    }
+    return n;
+}
+
+// functions that take a key, an audio sample, and the index of the audio sample  
+// and encrypt or decrypt it with a feistel cipher. 
+int encrypt16bit(unsigned long long int key, int audio_sample, int x) {
     // converts key to a binary string
     std::string keystr = std::to_string(key);
     std::string keybinary = std::bitset< 64 >(key).to_string();
@@ -104,6 +158,8 @@ int encrypt(unsigned long long int key, int audio_sample, int x) {
     int L0 = sbox[w1][w2];
     int R0 = sbox[w3][w4];
 
+    
+
     // this is the main part of the cipher, a round key is created by left bit rotating one of the key parts
     // this new key is then xored with R0 and then with L0 and assigned to R1 while L1 is just equal to R2
     // this continues for a set number of rounds before the final stage occurs 
@@ -118,7 +174,7 @@ int encrypt(unsigned long long int key, int audio_sample, int x) {
     }
 
     // in the final ecryption stage, L and R are not swapped at the end
-    int roundkey = leftRotate(keys[rounds], (x % 8));
+    int roundkey = leftRotate(keys[rounds % 8], (x % 8));
     int fint = R0 ^ roundkey;
     int L1 = L0 ^ fint;
     int R1 = R0;
@@ -130,14 +186,17 @@ int encrypt(unsigned long long int key, int audio_sample, int x) {
     std::string Routstr = std::bitset< 8 >(Rout).to_string();
 
     // the binary strings are then converted to an integer 
-    short int outaudio_sample = stoi(Loutstr + Routstr, 0, 2);
+    int outaudio_sample = stoi(Loutstr + Routstr, 0, 2);
 
     return outaudio_sample;
 }
 
-int decrypt(unsigned long long int key, int audio_sample, int x) {
+int decrypt16bit(unsigned long long int key, int audio_sample, int x) {
+    
+
     std::string keystr = std::to_string(key);
     std::string keybinary = std::bitset< 64 >(key).to_string();
+    
 
 
 
@@ -147,28 +206,16 @@ int decrypt(unsigned long long int key, int audio_sample, int x) {
     }
 
 
-    //std::cout << audio_sample;
-    //std::cout << "\n";
-
-
-   unsigned short int encodedaudio = audio_sample;
-
-
-
-   //std::cout << encodedaudio;
-   //std::cout << "\n";
+   int encodedaudio = audio_sample;
 
 
    std::string encodedbin = std::bitset< 16 >(encodedaudio).to_string();
 
 
 
-
    int L0 = stoi(encodedbin.substr(0, 8), 0, 2);
    int R0 = stoi(encodedbin.substr(8, 8), 0, 2);
 
-   //std::cout << L1 << " " << R1;
-   //std::cout << "\n";
 
 
    for (int j = 0; j < rounds; j++) {
@@ -180,8 +227,6 @@ int decrypt(unsigned long long int key, int audio_sample, int x) {
        R0 = R1;
 
    }
-   //std::cout << "0";
-   //std::cout << "\n";
 
    int roundkey = leftRotate(keys[0], (x % 8));
    int fint = R0 ^ roundkey;
@@ -190,13 +235,9 @@ int decrypt(unsigned long long int key, int audio_sample, int x) {
    int Lout = L1;
    int Rout = R1;
 
-
-   //std::cout << Lout << " " << Rout;
-   //std::cout << "\n";
-   //std::cout << "\n";
-
    std::string Loutbin = std::bitset< 8 >(Lout).to_string();
    std::string Routbin = std::bitset< 8 >(Rout).to_string();
+
 
 
    int w1 = stoi(Loutbin.substr(0, 4), 0, 2);
@@ -211,25 +252,136 @@ int decrypt(unsigned long long int key, int audio_sample, int x) {
    std::string Routbin2 = std::bitset< 8 >(Routsbox).to_string();
 
 
-   short int outaudio_sampledecode = stoi(Loutbin2 + Routbin2, 0, 2);
+   int outaudio_sampledecode = stoi(Loutbin2 + Routbin2, 0, 2);
+
+    return outaudio_sampledecode;
+}
+
+int encrypt8bit(unsigned long long int key, int audio_sample, int x) {
+    // converts key to a binary string
+    std::string keystr = std::to_string(key);
+    std::string keybinary = std::bitset< 64 >(key).to_string();
+
+    // splits key into 16 4 bit key parts
+    for (int i = 0; i < 16; i++) {
+        std::string keypart = keybinary.substr(i * 4, 4);
+        keys8bit[i] = stoi(keypart, 0, 2);
+    }
+
+    // converts audio sample to binary string
+    unsigned int audio_samplenormalized = audio_sample;
+    std::string audiobinary = std::bitset< 8 >(audio_sample).to_string();
+    
+
+    // 4 integer words are created by spliting the audio binary string
+    int w1 = stoi(audiobinary.substr(0, 2), 0, 2);
+    int w2 = stoi(audiobinary.substr(2, 2), 0, 2);
+    int w3 = stoi(audiobinary.substr(4, 2), 0, 2);
+    int w4 = stoi(audiobinary.substr(6, 2), 0, 2);
+
+    // the 4 integer words are used as indices in the substitution boxes to creat left and right initial integers
+    int L0 = sbox8bit[w1][w2];
+    int R0 = sbox8bit[w3][w4];
+
+
+    // this is the main part of the cipher, a round key is created by left bit rotating one of the key parts
+    // this new key is then xored with R0 and then with L0 and assigned to R1 while L1 is just equal to R2
+    // this continues for a set number of rounds before the final stage occurs 
+  
+
+    for (int j = 0; j < rounds; j++) {
+        int roundkey = leftRotate4bits(keys8bit[j % 16], (x % 4));
+        int fint = R0 ^ roundkey;
+        int R1 = L0 ^ fint;
+        int L1 = R0;
+        L0 = L1;
+        R0 = R1;
+    }
+
+    // in the final ecryption stage, L and R are not swapped at the end
+    int roundkey = leftRotate4bits(keys8bit[rounds % 16], (x % 4));
+    int fint = R0 ^ roundkey;
+    int L1 = L0 ^ fint;
+    int R1 = R0;
+    int Lout = L1;
+    int Rout = R1;
+
+    // L and R are now converted back to a binary string 
+    std::string Loutstr = std::bitset< 4 >(Lout).to_string();
+    std::string Routstr = std::bitset< 4 >(Rout).to_string();
+
+    // the binary strings are then converted to an integer 
+    short int outaudio_sample = stoi(Loutstr + Routstr, 0, 2);
+
+    return outaudio_sample;
+}
+
+int decrypt8bit(unsigned long long int key, int audio_sample, int x) {
+  
+    std::string keystr = std::to_string(key);
+    std::string keybinary = std::bitset< 64 >(key).to_string();
 
 
 
-   
+    for (int i = 0; i < 16; i++) {
+        std::string keypart = keybinary.substr(i * 4, 4);
+        keys8bit[i] = stoi(keypart, 0, 2);
+    }
 
 
+    unsigned short int encodedaudio = audio_sample;
 
-   //std::cout << outaudio_sampledecode;
-   //std::cout << "\n";
-   //std::cout << "\n";
-   //std::cout << "\n";
+    std::string encodedbin = std::bitset< 8 >(encodedaudio).to_string();
+
+    int L0 = stoi(encodedbin.substr(0, 4), 0, 2);
+    int R0 = stoi(encodedbin.substr(4, 4), 0, 2);
+
+
+    for (int j = 0; j < rounds; j++) {
+        int roundkey = leftRotate4bits(keys8bit[(rounds - j) % 16], (x % 4));
+        int fint = R0 ^ roundkey;
+        int R1 = L0 ^ fint;
+        int L1 = R0;
+        L0 = L1;
+        R0 = R1;
+    }
+
+    int roundkey = leftRotate4bits(keys[0], (x % 4));
+    int fint = R0 ^ roundkey;
+    int L1 = L0 ^ fint;
+    int R1 = R0;
+    int Lout = L1;
+    int Rout = R1;
+
+    
+
+
+    std::string Loutbin = std::bitset< 4 >(Lout).to_string();
+    std::string Routbin = std::bitset< 4 >(Rout).to_string();
+
+
+    int w1 = stoi(Loutbin.substr(0, 2), 0, 2);
+    int w2 = stoi(Loutbin.substr(2, 2), 0, 2);
+    int w3 = stoi(Routbin.substr(0, 2), 0, 2);
+    int w4 = stoi(Routbin.substr(2, 2), 0, 2);
+
+    int Loutsbox = sboxinv8bit[w1][w2];
+    int Routsbox = sboxinv8bit[w3][w4];
+
+    std::string Loutbin2 = std::bitset< 4 >(Loutsbox).to_string();
+    std::string Routbin2 = std::bitset< 4 >(Routsbox).to_string();
+
+
+    short int outaudio_sampledecode = stoi(Loutbin2 + Routbin2, 0, 2);
 
     return outaudio_sampledecode;
 }
 
 PYBIND11_MODULE(encryptionmodule, m) {
-    m.def("encrypt", &encrypt);
-    m.def("decrypt", &decrypt);
+    m.def("encrypt16bit", &encrypt16bit);
+    m.def("decrypt16bit", &decrypt16bit);
+    m.def("encrypt8bit", &encrypt8bit);
+    m.def("decrypt8bit", &decrypt8bit);
 
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;
