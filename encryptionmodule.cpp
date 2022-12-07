@@ -14,7 +14,7 @@ namespace py = pybind11;
 int keys[8];
 int keys8bit[16];
 
-// subsitution boxes and their inverses
+// subsitution boxes and the inverse box
 int sbox[16][16] = {
         {205, 30, 131, 91, 49, 1, 147, 74, 165, 80, 100, 225, 228, 164, 218, 250},
         {64, 93, 88, 213, 105, 18, 68, 208, 104, 78, 70, 77, 10, 209, 99, 95},
