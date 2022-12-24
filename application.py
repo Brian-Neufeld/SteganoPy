@@ -1474,7 +1474,7 @@ def decrypt_audio(audio_array_to_decode, bitdepth):
 
     if bitdepth == 16:
         for x in range(len(audio_array_to_decode)):
-            audio_array_output[x] = encryptionmodule.decrpyt16bit(intkey, len(audio_array_to_decode[x]), x)
+            audio_array_output[x] = encryptionmodule.decrypt16bit(intkey, int(audio_array_to_decode[x]), x)
 
             if x > 0:
                 if x % percentofaudio == 0: 
