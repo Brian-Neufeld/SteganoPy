@@ -1018,8 +1018,14 @@ def encode_fn():
         audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
 
 
+    if "16" in gui_class.encoding_type.get():
+        audio_array_to_encode = audio_array_to_encode + ((2**16)/2)
+        audio_array_to_encode = audio_array_to_encode.astype(dtype=int)
+    elif "8" in gui_class.encoding_type.get():
+        audio_array_to_encode = audio_array_to_encode + ((2**8)/2)
+        audio_array_to_encode = audio_array_to_encode.astype(dtype=int)
 
-
+    print("original audio array")
     print(audio_array_to_encode)
 
     # removes silence from audio
@@ -1033,6 +1039,10 @@ def encode_fn():
         audio_array_to_encode = encrypt_audio(audio_array_to_encode)
         progressbar_label.config(text="Audio is being encoded")
         progressbar_popup.update_idletasks()
+
+        print("encrypted audio array")
+        print(audio_array_to_encode)
+    
 
     # vary image size to fit entire audio array
     if vary_image_size_check.get() == 1:
@@ -1089,17 +1099,7 @@ def encode_fn():
         
     audio_array_to_encode = np.insert(audio_array_to_encode, 0, start_digit)
 
-    print(audio_array_to_encode)
-    
-    if "16" in gui_class.encoding_type.get():
-        audio_array_to_encode = audio_array_to_encode + ((2**16)/2)
-        audio_array_to_encode = audio_array_to_encode.astype(dtype=int)
-    elif "8" in gui_class.encoding_type.get():
-        audio_array_to_encode = audio_array_to_encode + ((2**8)/2)
-        audio_array_to_encode = audio_array_to_encode.astype(dtype=int)
 
-    
-    
 
     if len(audio_array_to_encode)*2 > (len(image_array) * len(image_array[0]) * 3):
         if messagebox.askyesno('Program Warning', 'Warning: Audio is too large for image and will be cropped. Do you want to continue?') == False:
@@ -1107,6 +1107,7 @@ def encode_fn():
             return
     
     print("final array")
+    audio_array_to_encode = audio_array_to_encode.astype(int)
     print(audio_array_to_encode)
 
     # For 16 bit audio, the digits of each audio sample are split and divided across 2 pixels 
@@ -1156,17 +1157,23 @@ def encode_fn():
                         if image_array[x][y][z] >= 250:
                             image_array[x][y][z] = 250
 
-                        image_array[x][y][z] = round(image_array[x][y][z]/10)*10
+                        image_array[x][y][z] = round(image_array[x][y][z], -1)
 
-                        if len(str(audio_array_to_encode[audio_index]))-1 >= z:
-                            if int(str(audio_array_to_encode[audio_index])[z]) > 5:
-                                image_array[x][y][z] -= 10
-
-
+                        if len(str(audio_array_to_encode[audio_index])) >= z+1:
+                            if image_array[x][y][z] >= 250:
+                                if int(str(audio_array_to_encode[audio_index])[z]) > 5:
+                                    image_array[x][y][z] -= 10
+                                    
                             image_array[x][y][z] += int(str(audio_array_to_encode[audio_index])[z])
+                            
+                            
+                        else:
+                            image_array[z][y][z] += 0
 
                         if z == 2:
                             audio_index += 1
+                    #print(image_array[x][y][z])
+                    #time.sleep(1)
 
             general_progress_bar(x, len(image_array))
             progressbar_popup.update_idletasks()           
@@ -1256,10 +1263,11 @@ def decode_fn():
 
     audio_index = 0
     if thing1[0] == "0":
-        magic_number = str(round(int(thing1+thing2)-(2**16)/2))
+        magic_number = str(round(int(thing1+thing2))) #-(2**16)/2))
     else:
-        magic_number = str(round(int(thing1)-(2**8)/2))
+        magic_number = str(round(int(thing1))) #-(2**8)/2))
 
+    print("magic number")
     print(magic_number)
     
 
@@ -1289,13 +1297,23 @@ def decode_fn():
             progressbar_popup.update_idletasks()
 
         audio_out = audioarray - ((2**8)/2)
-        audioarray = audio_out[1:].astype(dtype=np.int8)
+        audioarray = audio_out[1:].astype(dtype=int)
+
+    print(audioarray[0:25])
+    print("after decrypt")
 
     if magic_number[-1] in ("3", "2"):
-        audioarray = decrypt_audio(audioarray)
+        if magic_number[0] in ("1","3"):
+            audioarray = decrypt_audio(audioarray, 16)
+            audioarray = audioarray - ((2**16)/2)
+        else:
+            audioarray = decrypt_audio(audioarray, 8)
+            audioarray = audioarray - ((2**8)/2)
+        
+        print(audioarray[0:25])
             
     if magic_number[-1] in ("3", "1"):
-        audio_array = add_silence(audio_array)
+        audio_array = add_silence(audioarray)
 
     if magic_number[-2] == "1":
         sample_rate = 32000
@@ -1325,6 +1343,14 @@ def decode_fn():
         audio_sample_width = 1
         audio_channels = 1
 
+    print(y)
+    print("len of y")
+    print(len(y))
+
+    if len(y) % 2 != 0:
+        y = y[:-1]
+        print(len(y))
+
     song = pydub.AudioSegment(y.tobytes(), frame_rate=sample_rate, sample_width=audio_sample_width, channels=audio_channels)
     song.export(f.name, format="wav", bitrate="48k")
 
@@ -1349,6 +1375,8 @@ def encrypt_audio(audio_array_to_encode):
     
 
     percentofaudio = round(len(audio_array_output) * .001) 
+    if percentofaudio == 0:
+        percentofaudio = len(audio_array_output) * .001
 
     key = int(textBox.get(),16)
 
@@ -1370,13 +1398,28 @@ def encrypt_audio(audio_array_to_encode):
         messagebox.showerror('Program Error', 'Error: Key size is greater than 64 bits')
         return
 
-    for x in range(len(audio_array_to_encode)):
-        audio_array_output[x] = encryptionmodule.encrypt(intkey, int(audio_array_to_encode[x]), x)
-        if x > 0:
-            if x % percentofaudio == 0: 
-                general_progress_bar(x, len(audio_array_to_encode))
-                progressbar_popup.update_idletasks()
+    print("key:")
+    print(intkey)
 
+    if "16" in gui_class.encoding_type.get():
+        for x in range(len(audio_array_to_encode)):
+            audio_array_output[x] = encryptionmodule.encrypt16bit(intkey, int(audio_array_to_encode[x]), x)
+
+            if x > 0:
+                if x % percentofaudio == 0: 
+                    general_progress_bar(x, len(audio_array_to_encode))
+                    progressbar_popup.update_idletasks()
+            
+    elif "8" in gui_class.encoding_type.get():
+        for x in range(len(audio_array_to_encode)):
+            audio_array_output[x] = encryptionmodule.encrypt8bit(intkey, int(audio_array_to_encode[x]), x)
+            #time.sleep(5)
+
+            if x > 0:
+                if x % percentofaudio == 0: 
+                    general_progress_bar(x, len(audio_array_to_encode))
+                    progressbar_popup.update_idletasks()
+            
         
     general_progress_bar(1, 1)
     progressbar_popup.update_idletasks()
@@ -1389,9 +1432,11 @@ def encrypt_audio(audio_array_to_encode):
     gui_class.audio_plot1(str(gui_class.current_plot_type))
 
     audio_array_to_encode = audio_array_output
+
+    print(audio_array_to_encode)
     return audio_array_to_encode
 
-def decrypt_audio(audio_array_to_decode):
+def decrypt_audio(audio_array_to_decode, bitdepth):
     pygame.mixer.stop()
 
     label = "Audio is being decrypted"
@@ -1401,6 +1446,8 @@ def decrypt_audio(audio_array_to_decode):
     audio_array_output = np.zeros(len(audio_array_to_decode))
     
     percentofaudio = round(len(audio_array_output) * .001) 
+    if percentofaudio == 0:
+        percentofaudio = len(audio_array_output) * .001
 
     key = int(textBox.get(),16)
 
@@ -1413,7 +1460,6 @@ def decrypt_audio(audio_array_to_decode):
         while len(key1) < 64:
             key1 += "0"
 
-
         initializedKey = str(key1)
 
         intkey = int(key1,2)
@@ -1423,14 +1469,26 @@ def decrypt_audio(audio_array_to_decode):
         messagebox.showerror('Program Error', 'Error: Key size is greater than 64 bits')
         return
     
+    print("key")
+    print(intkey)
 
-    for x in range(len(audio_array_to_decode)):
-        audio_array_output[x] = encryptionmodule.decrypt(intkey, int(audio_array_to_decode[x]), x)
+    if bitdepth == 16:
+        for x in range(len(audio_array_to_decode)):
+            audio_array_output[x] = encryptionmodule.decrpyt16bit(intkey, len(audio_array_to_decode[x]), x)
 
-        if x > 0:
-            if x % percentofaudio == 0: 
-                general_progress_bar(x, len(audio_array_to_decode))
-                progressbar_popup.update_idletasks()
+            if x > 0:
+                if x % percentofaudio == 0: 
+                    general_progress_bar(x, len(audio_array_to_decode))
+                    progressbar_popup.update_idletasks()
+
+    elif bitdepth == 8:
+        for x in range(len(audio_array_to_decode)):
+            audio_array_output[x] = encryptionmodule.decrypt8bit(intkey, int(audio_array_to_decode[x]), x)
+
+            if x > 0:
+                if x % percentofaudio == 0: 
+                    general_progress_bar(x, len(audio_array_to_decode))
+                    progressbar_popup.update_idletasks()
 
 
     general_progress_bar(1, 1)
@@ -1558,7 +1616,6 @@ def general_progress_bar(increment, total):
 
 def update_general_pb():
     return f"Current Progress: {round(general_progress_bar1['value'],1)}%"
-
 
 
 # run the application
