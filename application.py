@@ -300,8 +300,6 @@ class GUI:
         img = Image.open(base_img_filename)
         img1 = ImageTk.PhotoImage(img)
 
-        print(base_img_filename.split("/")[-1])
-
         open_img_filename.config(text=base_img_filename.split("/")[-1])
 
         base_img_width = img1.width()
@@ -464,14 +462,9 @@ class GUI:
             if audioclip.channels == 1:
                 audioarray_2channels = np.repeat(audio_array.reshape(len(audio_array), 1), 2, axis = 1)
                 audioarray_2channels = audioarray_2channels.astype("int16")
-
-                print(audioarray_2channels)
-                print(audio_array)
             elif audioclip.channels == 2:
                 audioarray_2channels = np.vstack((audio_array[::2], audio_array[1::2])).T
                 audioarray_2channels = np.ascontiguousarray(audioarray_2channels, dtype=np.int16)
-
-                print(audioarray_2channels)
 
             audiotoplay = pygame.sndarray.make_sound(audioarray_2channels)
             audiotoplay.play(loops=0)
@@ -511,7 +504,6 @@ class GUI:
         y = np.int16(audio_array_output)
         song = pydub.AudioSegment(y.tobytes(), frame_rate=48000, sample_width=2, channels=1)
         song.export(str(export_audio_filename.name), format="wav", bitrate="48k") 
-        print(str(export_audio_filename.name))
 
     def change_plot1(self, *args):
         if self.current_plot_type == self.audio_plot_type.get():
@@ -833,7 +825,6 @@ def preview_fn():
     global audioarray
     global base_img_filename, audio_filename
 
-    #print(base_img_filename)
 
     if base_img_filename == 1:
         messagebox.showerror('Program Error', 'Error: No image file seleted')
@@ -842,8 +833,6 @@ def preview_fn():
         messagebox.showerror('Program Error', 'Error: No audio file seleted')
         return
 
-
-    #preview_btn.config(state="disabled")
 
     im = Image.open(base_img_filename)
         
@@ -880,7 +869,6 @@ def preview_fn():
     
     for x in range(len(a)):
         if x < 500:
-            #print(x)
             for y in range(len(a[x])):
                 if y < 500:
                     for z in range(len(a[x][y])):
@@ -1017,18 +1005,12 @@ def encode_fn():
         audio_array_to_encode = np.array(audioclip.get_array_of_samples(), dtype=np.int16)
 
 
-    print("original audio array")
-    print(audio_array_to_encode[0:15])
-
     if "16" in gui_class.encoding_type.get():
         audio_array_to_encode = audio_array_to_encode + ((2**16)/2)
         audio_array_to_encode = audio_array_to_encode.astype(dtype=int)
     elif "8" in gui_class.encoding_type.get():
         audio_array_to_encode = audio_array_to_encode + ((2**8)/2)
         audio_array_to_encode = audio_array_to_encode.astype(dtype=int)
-
-    print("original audio array")
-    print(audio_array_to_encode[0:15])
 
     # removes silence from audio
     if remove_silence_check.get() == 1:
@@ -1041,9 +1023,6 @@ def encode_fn():
         audio_array_to_encode = encrypt_audio(audio_array_to_encode)
         progressbar_label.config(text="Audio is being encoded")
         progressbar_popup.update_idletasks()
-
-        print("encrypted audio array")
-        print(audio_array_to_encode[0:15])
     
 
     # vary image size to fit entire audio array
@@ -1066,7 +1045,6 @@ def encode_fn():
 
         im = im.resize((w,h))
         image_array = np.array(im)
-        #print(len(image_array))
 
 
     # inserts digit at the start of the audio array to inform program of how it has been encoded
@@ -1108,9 +1086,8 @@ def encode_fn():
             progressbar_popup.destroy()
             return
     
-    print("final array")
     audio_array_to_encode = audio_array_to_encode.astype(int)
-    print(audio_array_to_encode[0:15])
+    
 
     # For 16 bit audio, the digits of each audio sample are split and divided across 2 pixels 
     # with the last digit of each colour being a digit from the audio
@@ -1174,8 +1151,6 @@ def encode_fn():
 
                         if z == 2:
                             audio_index += 1
-                    #print(image_array[x][y][z])
-                    #time.sleep(1)
 
             general_progress_bar(x, len(image_array))
             progressbar_popup.update_idletasks()           
@@ -1269,8 +1244,6 @@ def decode_fn():
     else:
         magic_number = str(round(int(thing1))) #-(2**8)/2))
 
-    print("magic number")
-    print(magic_number)
     
 
     if magic_number[-3] in ("1", "3") :
@@ -1288,8 +1261,6 @@ def decode_fn():
             progressbar_popup.update_idletasks()
         audio_out = audioarray #- ((2**16)/2)
         audioarray = audio_out[1:].astype(dtype=int)
-        print(audio_out)
-        print(audioarray)
     else:
         audioarray = np.zeros(int(len(a)*len(a[0])))
         for x in range(len(a)):
@@ -1303,26 +1274,19 @@ def decode_fn():
         audio_out = audioarray #- ((2**8)/2)
         audioarray = audio_out[1:].astype(dtype=int)
 
-    print("decoded audio array")
-    print(audioarray[0:15])
 
-
-    print("after decrypt")
     if magic_number[-1] in ("3", "2"):
         if magic_number[0] in ("1","3"):
             audioarray = decrypt_audio(audioarray, 16)
             audioarray = audioarray - ((2**16)/2)
         else:
             audioarray = decrypt_audio(audioarray, 8)
-            print(audioarray[0:15]) 
             audioarray = audioarray - ((2**8)/2) 
     else:
         if magic_number[0] in ("1","3"):
             audioarray = audioarray - ((2**16)/2)
         else:
             audioarray = audioarray - ((2**8)/2)
-
-    print(audioarray[0:15])
             
     if magic_number[-1] in ("3", "1"):
         audioarray = add_silence(audioarray)
@@ -1407,7 +1371,8 @@ def encrypt_audio(audio_array_to_encode):
         messagebox.showerror('Program Error', 'Error: Key size is greater than 64 bits')
         return
 
-
+    intkey = int(str(bin(key))[:60], 2)
+    
     if "16" in gui_class.encoding_type.get():
         for x in range(len(audio_array_to_encode)):
             audio_array_output[x] = encryptionmodule.encrypt16bit(intkey, int(audio_array_to_encode[x]), x)
@@ -1430,10 +1395,6 @@ def encrypt_audio(audio_array_to_encode):
         
     general_progress_bar(1, 1)
     progressbar_popup.update_idletasks()
-
-    
-    #duration = perf_counter() - start
-    #print('{} took {:.3f} seconds\n\n'.format("c++", duration)) 
     
     gui_class.audio_plot2(str(gui_class.current_plot2_type))
     gui_class.audio_plot1(str(gui_class.current_plot_type))
@@ -1474,7 +1435,8 @@ def decrypt_audio(audio_array_to_decode, bitdepth):
     elif key.bit_length() > 64:
         messagebox.showerror('Program Error', 'Error: Key size is greater than 64 bits')
         return
-    
+
+    intkey = int(str(bin(key))[:60], 2)
 
     if bitdepth == 16:
         for x in range(len(audio_array_to_decode)):
@@ -1497,14 +1459,11 @@ def decrypt_audio(audio_array_to_decode, bitdepth):
 
     general_progress_bar(1, 1)
     progressbar_popup.update_idletasks()
-
-    #gui_class.audio_plot2(str(gui_class.current_plot2_type))
-    #gui_class.audio_plot1(str(gui_class.current_plot_type))
     
     return audio_array_output
 
 def remove_silence(audio_array_to_encode):
-    cutoff_level = -50 #dB
+    cutoff_level = -40 #dB
 
     if "16" in gui_class.encoding_type.get():
         sample_width = 16
@@ -1539,8 +1498,9 @@ def remove_silence(audio_array_to_encode):
             start_index = zero_locations[0][x]
             length = 1
 
-        #general_progress_bar(x, len(zero_locations[0]))
-        #progressbar_popup.update_idletasks()
+        general_progress_bar(x, len(zero_locations[0]))
+        progressbar_popup.update_idletasks()
+
         
     audio_array_list = audio_array_to_encode.tolist()
 
@@ -1550,7 +1510,7 @@ def remove_silence(audio_array_to_encode):
 
     silence_array = []
 
-    print(array_of_zeros)
+    
 
     if sample_width == 16:
         for z in range(len(array_of_zeros)):
@@ -1565,17 +1525,18 @@ def remove_silence(audio_array_to_encode):
 
     silence_array.append(101)
     silence_array.append(202)
-    silence_array.append(101)
-
-    print("silence_array")
-    print(silence_array)
+    silence_array.append(303)
 
     audio_array_to_encode = silence_array + audio_array_list
 
     audio_array_to_encode = np.array(audio_array_to_encode)
-   
-    #general_progress_bar(1, 1)
-    #progressbar_popup.update_idletasks()
+
+    general_progress_bar(1, 1)
+    progressbar_popup.update_idletasks()
+
+    with open("silence removed array.txt", "w") as txt_file:
+        for x in range(len(audio_array_to_encode)):
+            txt_file.write(str(audio_array_to_encode[x]) + "\n")
 
     return audio_array_to_encode
 
@@ -1583,7 +1544,7 @@ def add_silence(audio_array_to_decode):
     for x in range(len(audio_array_to_decode)):
         if audio_array_to_decode[x] == 10101 and audio_array_to_decode[x+1] == 20202 and audio_array_to_decode[x+2] == 30303:
             silence_array = audio_array_to_decode[:x]
-            print(silence_array)
+            
 
 
 
