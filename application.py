@@ -80,7 +80,7 @@ class GUI:
         global open_audio_file_btn, open_audio_file_btn, open_img_filename, open_audio_filename_tab1, open_audio_length_tab1, preview_btn, encode_btn, open_audio_length_tab3
         global baseImgdims, disp_inputimg, inputimgFrame, outputFrame, disp_img2, preview_img_label
 
-        global open_audio_filename_tab3, openencodedimgfilename, disp_encodedimg, baseFrameencoded, textBox, playoutputaudiobutton, Exportoutputaudiobutton
+        global open_audio_filename_tab3, openencodedimgfilename, disp_encodedimg, baseFrameencoded, textBox_tab1, textBox_tab2, textBox_tab3, playoutputaudiobutton, Exportoutputaudiobutton
 
         self.IsPaused = False
         self.current_audio = "Input"
@@ -214,9 +214,11 @@ class GUI:
         inputtextkey = tk.Entry(tab2, width=24, bd=2)
         inputtextkey.place(x=0, y=405)
 
-        textBox = tk.Entry(tab2, width=24, bd=2)
-        textBox.insert(0, "abc123")
-        textBox.place(x=0, y=405)
+        textBox_tab2 = tk.Entry(tab2, width=24, bd=2)
+        textBox_tab2.insert(0, "abc123")
+        textBox_tab2.place(x=0, y=405)
+
+        ToolTip(textBox_tab2, msg="Maximum key size is 64 bits, key format is hexadecimal", delay=0.5)
 
 
 
@@ -239,7 +241,7 @@ class GUI:
         stopaudiobutton = tk.Button(tab3, text='Stop audio', height = 2, width=20, command=self.stop_audio)
         stopaudiobutton.place(x=0, y=155)
 
-        encrypt_audio_button = tk.Button(tab3, text='Encrypt audio', height = 2, width=20, command=encrypt_audio)
+        encrypt_audio_button = tk.Button(tab3, text='Encrypt audio', height = 2, width=20, command=lambda: encrypt_audio(np.array(pydub.AudioSegment.from_file(audio_filename).get_array_of_samples(), dtype=np.int16), tab=3))
         encrypt_audio_button.place(x=0, y=225)
 
         decrypt_audio_button = tk.Button(tab3, text='Decrypt audio', height = 2, width=20, command=decrypt_audio)
@@ -254,9 +256,11 @@ class GUI:
         inputtextkey = tk.Entry(tab3, width=24, bd=2)
         inputtextkey.place(x=0, y=405)
 
-        textBox = tk.Entry(tab3, width=24, bd=2)
-        textBox.insert(0, "abc123")
-        textBox.place(x=0, y=405)
+        textBox_tab3 = tk.Entry(tab3, width=24, bd=2)
+        textBox_tab3.insert(0, "abc123")
+        textBox_tab3.place(x=0, y=405)
+
+        ToolTip(textBox_tab3, msg="Maximum key size is 64 bits, key format is hexadecimal", delay=0.5)
 
 
         plot_options = ("Input audio waveform", "Input audio spectrogram", "Output audio waveform", "Output audio spectrogram")
@@ -1020,7 +1024,7 @@ def encode_fn():
         
     # encrypts audio with key
     if encrypt_check.get() == 1:
-        audio_array_to_encode = encrypt_audio(audio_array_to_encode)
+        audio_array_to_encode = encrypt_audio(audio_array_to_encode, 1)
         progressbar_label.config(text="Audio is being encoded")
         progressbar_popup.update_idletasks()
     
@@ -1335,8 +1339,12 @@ def decode_fn():
     time.sleep(1)
     prog.setProgress(0)
 
-def encrypt_audio(audio_array_to_encode):
+def encrypt_audio(audio_array_to_encode, tab):
     global audio_array_output
+    
+
+    print(audio_array_to_encode[0:10])
+
 
     pygame.mixer.stop()
 
@@ -1351,7 +1359,11 @@ def encrypt_audio(audio_array_to_encode):
     if percentofaudio == 0:
         percentofaudio = len(audio_array_output) * .001
 
-    key = int(textBox.get(),16)
+    if tab == 1:
+        key = int(textBox_tab1.get(),16)
+    elif tab == 3:
+        key = int(textBox_tab3.get(),16)
+    
 
 
     if key.bit_length() < 64:
@@ -1372,6 +1384,9 @@ def encrypt_audio(audio_array_to_encode):
         return
 
     intkey = int(str(bin(key))[:60], 2)
+
+    print(intkey)
+
     
     if "16" in gui_class.encoding_type.get():
         for x in range(len(audio_array_to_encode)):
@@ -1401,10 +1416,15 @@ def encrypt_audio(audio_array_to_encode):
 
     audio_array_to_encode = audio_array_output
 
+    
+    print(audio_array_to_encode[0:10])
+
     return audio_array_to_encode
 
 def decrypt_audio(audio_array_to_decode, bitdepth):
     pygame.mixer.stop()
+    print(audio_array_to_decode[0:10])
+
 
     label = "Audio is being decrypted"
 
@@ -1416,7 +1436,7 @@ def decrypt_audio(audio_array_to_decode, bitdepth):
     if percentofaudio == 0:
         percentofaudio = len(audio_array_output) * .001
 
-    key = int(textBox.get(),16)
+    key = int(textBox_tab2.get(),16)
 
     if key.bit_length() < 64:
         key1 = str(bin(key))
@@ -1437,6 +1457,8 @@ def decrypt_audio(audio_array_to_decode, bitdepth):
         return
 
     intkey = int(str(bin(key))[:60], 2)
+
+    print(intkey)
 
     if bitdepth == 16:
         for x in range(len(audio_array_to_decode)):
@@ -1460,6 +1482,8 @@ def decrypt_audio(audio_array_to_decode, bitdepth):
     general_progress_bar(1, 1)
     progressbar_popup.update_idletasks()
     
+    print(audio_array_output[0:10])
+
     return audio_array_output
 
 def remove_silence(audio_array_to_encode):
